@@ -1,0 +1,38 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons>
+      <ion-back-button slot="start" defaultHref="/dashboard"></ion-back-button>
+      <ion-title>trans-hist</ion-title>
+      <ion-button slot="end" (click)="syncAllAtOnce()" *ngIf="hasConnection && offlineItemsToSync.length">
+        <ion-icon name="refresh" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-toolbar>
+    <ion-card [color]="transaction.status === 'local'? 'light': transaction.status === 'S'? 'success': 'danger'" *ngFor="let transaction of transactionData">
+      <ion-card-header>
+        <ion-card-title>Po#{{ transaction.PoNumber }}</ion-card-title>
+        <ion-card-subtitle>Item# {{ transaction.ItemNumber }}</ion-card-subtitle>
+        <ion-card-subtitle>shipment #{{ transaction.shipLaneNum }}</ion-card-subtitle>
+      </ion-card-header>
+      <ion-buttons>
+        <ion-card-content>
+          
+          <p>ReceiptNo: {{ transaction.receiptNumber }}</p>
+          <p>Error: {{ transaction.message }}</p>
+          <p>Status: {{ transaction.status === 'local'? 'Pending': transaction.status === 'S'? 'Success': 'Error' }}</p>
+        </ion-card-content>
+        <ion-button slot="end" *ngIf="hasConnection && transaction.status==='local'" (click)="syncTransaction(transaction)">
+          <ion-icon [name]="transaction.status === 'local'? 'sync-outline': 'checkmark-outline'" slot="icon-only"></ion-icon>
+        </ion-button>
+        <ion-button *ngIf="transaction.status === 'E'" slot="end" (click)="deletetransaction(transaction.id)">
+          <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+        </ion-button>
+      </ion-buttons>
+      
+    </ion-card>
+  </ion-toolbar>
+</ion-content>

@@ -1,0 +1,20 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons>
+
+      <ion-back-button slot="start" defaultHref="/dashboard"></ion-back-button>
+      <ion-title>my-resp</ion-title>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-card color="primary" *ngFor="let item of loginTableData" >
+    <ion-card-header>
+      <ion-label>{{ item.RESPONSIBILITY }}</ion-label>
+    </ion-card-header>
+    <ion-card-content>
+      <p>Status: {{ item.STATUS }}</p>
+    </ion-card-content>
+  </ion-card>
+</ion-content>

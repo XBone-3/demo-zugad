@@ -1,0 +1,65 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons>
+      <ion-title>activity</ion-title>
+      <ion-button slot="secondary" *ngIf="syncAgain" (click)="onSyncAgain()">
+        <ion-icon name="refresh-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+      <ion-button slot="primary" (click)="logout()">
+        <ion-icon name="exit-outline" slot="icon-only"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+ <ion-list *ngIf="isOrgLoaded === true && isRespLoaded === true">
+  
+  <ion-item>
+    <ion-thumbnail>
+      <ion-spinner *ngIf="loadLocationStatus" name="bubbles"></ion-spinner>
+      <ion-icon *ngIf="!loadLocationStatus" name="location-outline"></ion-icon>
+    </ion-thumbnail>
+    <ion-card>
+      
+      <ion-card-header>
+        <ion-card-title>{{ loadLocations }}</ion-card-title>
+      </ion-card-header>
+
+      <ion-card-content>
+        <p>Status: {{ loadLocationStatus? "Locations Loading ...": "Locations Loaded" + " " + locations }}</p>
+      </ion-card-content>
+    </ion-card>
+  </ion-item>
+  <ion-item>
+    <ion-thumbnail>
+      <ion-spinner *ngIf="loadDocsForReceivingStatus" name="bubbles"></ion-spinner>
+      <ion-icon *ngIf="!loadDocsForReceivingStatus" name="list-outline"></ion-icon>
+    </ion-thumbnail>
+    <ion-card>
+      
+      <ion-card-header>
+        <ion-card-title>{{ loadDocsForReceiving }}</ion-card-title>
+      </ion-card-header>
+
+      <ion-card-content>
+        <p>Status: {{ loadDocsForReceiving }}</p>
+        <p>{{ loadDocsForReceivingStatus? "Loading ...": "Loaded" + " " + docs }}</p>
+      </ion-card-content>
+    </ion-card>
+  </ion-item>
+  <ion-item>
+    <ion-card>
+      <ion-card-header>
+        <ion-card-title>Login Successful</ion-card-title>
+        <ion-card-subtitle>Responsibilities</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        <ion-list>
+          <ion-item *ngFor="let resp of responsibilities">{{ resp }}</ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+  </ion-item>
+</ion-list>
+</ion-content>

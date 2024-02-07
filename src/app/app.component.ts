@@ -5,14 +5,15 @@ import { Component } from '@angular/core';
   styleUrls: ['app.component.scss'],
 })
 export class AppComponent {
+
+  public headerTitle = 'Mob-Inv';
   public appPages = [
-    { title: 'Inbox', url: '/folder/inbox', icon: 'mail' },
-    { title: 'Outbox', url: '/folder/outbox', icon: 'paper-plane' },
-    { title: 'Favorites', url: '/folder/favorites', icon: 'heart' },
-    { title: 'Archived', url: '/folder/archived', icon: 'archive' },
-    { title: 'Trash', url: '/folder/trash', icon: 'trash' },
-    { title: 'Spam', url: '/folder/spam', icon: 'warning' },
+    { title: 'Home', url: '/dashboard', icon: 'easel-outline' },
+    { title: 'Assigned Responsibilities', url: '/my-resp', icon: 'briefcase-outline' },
+    { title: 'Select Org', url: '/select-org', icon: 'briefcase-outline' },
+    { title: 'Refresh', url: '/activity', icon: 'refresh-outline' },
+    { title: 'Logout', url: '/dashboard/logout', icon: 'log-out-outline' },
+    { title: 'Logout + Clear', url: '/dashboard/logout-clear', icon: 'trash' },
   ];
-  public labels = ['Family', 'Friends', 'Notes', 'Work', 'Travel', 'Reminders'];
   constructor() {}
 }

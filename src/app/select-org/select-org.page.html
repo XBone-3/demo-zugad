@@ -1,0 +1,35 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons>
+      <ion-title>select Org</ion-title>
+      <!-- <ion-button slot="end" (click)="onRefresh()">
+        <ion-icon name="refresh" slot="icon-only"></ion-icon>
+      </ion-button> -->
+    </ion-buttons>
+  </ion-toolbar>
+  <ion-toolbar>
+    <ion-searchbar show-clear-button="always" clear-icon="trash-bin" [(ngModel)]="searchTerm" (ionInput)="onSearch()" (ionChange)="onSearch()"></ion-searchbar>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-toolbar>
+      <ion-card *ngFor="let organisation of organisations" (click)="onSelect(organisation)">
+        <ion-buttons>
+          <ion-button slot="start">
+            <ion-icon [name]=" (organisation === selectedOrg)? 'checkmark-circle' : 'checkmark-circle-outline'" slot="icon-only"  color="primary"></ion-icon>
+          </ion-button>
+          <ion-card-header>
+            <ion-card-title>{{organisation.InventoryOrgCode}}</ion-card-title>
+            <ion-card-subtitle>{{organisation.InventoryOrgName}}</ion-card-subtitle>
+          </ion-card-header>
+        </ion-buttons>
+      </ion-card>
+  </ion-toolbar>
+</ion-content>
+
+<ion-footer>
+  <ion-toolbar>
+    <ion-button expand="block" (click)="onConfirm()" [disabled]="!selectedOrg">Confirm</ion-button>
+  </ion-toolbar>
+</ion-footer>
