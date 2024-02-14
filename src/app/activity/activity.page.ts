@@ -2,16 +2,24 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { NavController } from '@ionic/angular';
 import { NodeApiService } from '../providers/node-api.service';
 import { 
-  locationTableName,
-  historyTableName, 
   transactionTableName,
   Org,
-  docsForReceivingTableName
+  docsForReceivingTableName,
+  subInventoryTableName,
+  getReasonsTableName,
+  locatorsTableName,
+  glPeriodsTableName,
+  inventoryPeriodsTableName,
+  purchasingPeriodsTableName,
+  lotsTableName,
+  serialsTableName
   } from '../CONSTANTS/CONSTANTS';
 import { SqliteService } from '../providers/sqlite.service';
 import { ApiSettings } from '../CONSTANTS/api-settings';
 import { Subscription } from 'rxjs';
 import { UiProviderService } from '../providers/ui-provider.service';
+import { AuthService } from '../login/auth.service';
+import { SharedService } from '../providers/shared.service';
 
 
 @Component({
@@ -23,26 +31,47 @@ export class ActivityPage implements OnInit, OnDestroy {
 
   organisation: Org | any;
   isOrgLoaded: boolean = false;
+  defaultOrgId: any;
   loadLocations: string = 'Locations';
   loadLocationStatus: boolean = true;
   loadDocsForReceiving: string = 'Docs For Receiving';
   loadDocsForReceivingStatus: boolean = true;
+  loadSubInventoryStatus: boolean = true;
+  loadSubInventoryMessage: string = 'Sub Inventories';
+  subInventories: any;
   responsibilities: any;
   isRespLoaded: boolean = false;
   locationsData: any;
   docsForReceivingColumns: any;
   locations: number = 0
   docs: number = 0
-  locationsDataSubscription!: Subscription;
-  docsForReceivingSubscription!: Subscription;
-  metadataSubscription!: Subscription;
   metadataLoaded: boolean = false;
   syncAgain: boolean = false;
+  success: boolean = true;
+  locationsDataSubscription!: Subscription;
+  docsForReceivingSubscription!: Subscription;
+  D4RmetadataSubscription!: Subscription;
+  subInventorySubscription!: Subscription;
+  subInvMetadataSubscription!: Subscription;
+  getReasonsSubscription!: Subscription
+  getReasonsDataSubscription!: Subscription
+  locatorsMetaDataSubscription!: Subscription;
+  locatorsDataSubscription!: Subscription;
+  getGlPeriodsSubscription!: Subscription;
+  getGlPeriodsDataSubscription!: Subscription;
+  getPurchasingPeriodsSubscription!: Subscription;
+  getPurchasingPeriodsDataSubscription!: Subscription;
+  lotsMetaDataSubscription!: Subscription;
+  lotsDataSubscription!: Subscription;
+  serialsMetaDataSubscription!: Subscription;
+  serialsDataSubscription!: Subscription;
   constructor(
     private apiService: NodeApiService,
     private navCtrl: NavController,
     private sqliteService: SqliteService,
-    private uiProviderService: UiProviderService
+    private uiProviderService: UiProviderService,
+    private authService: AuthService,
+    private sharedService: SharedService
   ) { }
 
   async ngOnInit() {
@@ -54,41 +83,193 @@ export class ActivityPage implements OnInit, OnDestroy {
       this.navCtrl.navigateRoot('/login');
     }
     try {
+      this.defaultOrgId = await this.apiService.getValue('orgId')
+    } catch (error) {
+      this.uiProviderService.presentAlert('Error', 'No Organisation data available');
+      this.navCtrl.navigateRoot('/login');
+    }
+    try {
       this.responsibilities = await this.apiService.getValue('responsibilities')
     this.isRespLoaded = true;
     } catch (error) {
       this.uiProviderService.presentAlert('Error', 'No Responsibilities data available');
       this.navCtrl.navigateRoot('/login');
     }
-    await this.createLocationTable(locationTableName);
-    await this.createHistoryTable(historyTableName);
+   
     await this.createTransactionHistoryTable(transactionTableName);
   }
 
   async ionViewDidEnter() {
-    await this.getDataFromLocationsApi();
-    // await this.getDocsForReceiving();
-    await this.getDocsForReceivingMetaData();
+    // await this.getGlPeriodsMetaData();
+    // await this.getPurchasingPeriodsMetaData();
+    // await this.getReasonsMetaData();
+    // await this.getSubInventoryMetaData();
+    // await this.getLocatorsMetaData();
+    // await this.getLotsMetaData();
+    // await this.getSerialsMetaData();
+    // await this.getDocsForReceivingMetaData();
+    await this.getResponsibilities();
+  
+  }
+
+  async getResponsibilities() {
+    const RESPONSIBILITIES =  [
+      { func: this.getGlPeriodsMetaData, name: 'GL Periods', message: ''},
+      { func: this.getPurchasingPeriodsMetaData, name: 'Purchasing Periods', message: ''},
+      { func: this.getReasonsMetaData, name: 'Reasons', message: ''},
+      { func: this.getSubInventoryMetaData, name: 'Sub Inventories', message: ''},
+      { func: this.getLocatorsMetaData, name: 'Locators', message: ''},
+      { func: this.getDocsForReceivingMetaData, name: 'Docs For Receiving', message: ''},
+      { func: this.getLotsMetaData, name: 'Lots', message: ''},
+      { func: this.getSerialsMetaData, name: 'Serials', message: ''},
+      { func: this.getGlPeriodsData, name: 'GL Periods Data', message: 'insert data'},
+      { func: this.getPurchasingPeriodsData, name: 'Purchasing Periods Data', message: 'insert data'},
+      { func: this.getReasonsData, name: 'Reasons Data', message: 'insert data'},
+      { func: this.getSubInventoryData, name: 'Sub Inventories Data', message: 'insert data'},
+      { func: this.getLocatorsData, name: 'Locators Data', message: 'insert data'},
+      { func: this.getDocsForReceivingData, name: 'Docs For Receiving Data', message: 'insert data'},
+      { func: this.getLotsData, name: 'Lots Data', message: 'insert data'},
+      { func: this.getSerialsData, name: 'Serials Data', message: 'insert data'},
+    ]
+
+    for (const responsibility of RESPONSIBILITIES) {
+      try {
+        await responsibility.func.call(this);
+      } catch (error) {
+        console.log(error)
+      } finally{
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+    this.navigateToDashboard();
+  }
+
+  async getGlPeriodsMetaData() {
+    const params = 'metadata'
+    this.getGlPeriodsSubscription = this.apiService.fetchAllByUrl(ApiSettings.glPeriodsUrl + params).subscribe({
+      next: async (resp: any) => {
+        if (resp) {
+          try {
+            await this.sharedService.createMetaDataTable(resp, glPeriodsTableName)
+            const columns = resp.map((obj: any) => obj.name)
+            // await this.getGlPeriodsData()
+          } catch (error) {
+            console.error(error);
+          }
+        }
+      }, error: (error) => {
+        console.error(error);
+        this.uiProviderService.presentToast('Error', 'failed to get gl periods table', 'danger');
+        this.success = false
+      }
+    })
+  }
+
+  async getGlPeriodsData() {
+    const params = `${this.defaultOrgId}`;
+    this.getGlPeriodsDataSubscription = this.apiService.fetchAllByUrl(ApiSettings.glPeriodsUrl + params).subscribe({
+      next: async (resp: any) => {
+        try {
+          const glPeriods = resp.GLPeriods
+          await this.sharedService.insertDataToTable(glPeriods, glPeriodsTableName)
+        } catch (error) {
+          alert('gl periods' +JSON.stringify(error))
+        }
+      }, error: (error) => {
+        console.error(error);
+        this.success = false
+      }
+    })
+  }
+
+  async getPurchasingPeriodsMetaData() {
+    const params = 'metadata'
+    this.getPurchasingPeriodsSubscription = this.apiService.fetchAllByUrl(ApiSettings.purchasingeriodsUrl + params).subscribe({
+      next: async (resp: any) => {
+        if (resp) {
+          try {
+            await this.sharedService.createMetaDataTable(resp, purchasingPeriodsTableName)
+            await this.getPurchasingPeriodsData()
+          } catch (error) {
+            console.error(error);
+          }
+        }
+      }, error: (error) => {
+        console.error(error);
+        this.success = false
+      }
+    })
+  }
+
+  async getPurchasingPeriodsData() {
+    const params = `${this.defaultOrgId}`;
+    this.getPurchasingPeriodsDataSubscription = this.apiService.fetchAllByUrl(ApiSettings.purchasingeriodsUrl + params).subscribe({
+      next: async (resp: any) => {
+        try {
+          const purchasingPeriods = resp.POPeriods
+          
+          await this.sharedService.insertDataToTable(purchasingPeriods, purchasingPeriodsTableName)
+        } catch (error) {
+          alert('purchasing periods' + JSON.stringify(error))
+        }
+      }, error: (error) => {
+        console.error(error);
+        this.success = false
+      }
+    })
+  }
+
+  async getReasonsMetaData() {
+    const params = 'metadata'
+    this.getReasonsSubscription = this.apiService.fetchAllByUrl(ApiSettings.reasonsConfigUrl + params).subscribe({
+      next: async (resp: any) => {
+        if (resp) {
+          try {
+            await this.sharedService.createMetaDataTable(resp, getReasonsTableName)
+            const columns = resp.map((obj: any) => obj.name)
+            await this.getReasonsData()
+          } catch (error) {
+            console.error(error);
+          }
+        }
+      }, error: (error) => {
+        console.error(error);
+        this.success = false
+      }
+    })
+  }
+
+  async getReasonsData() {
+    this.getReasonsDataSubscription = this.apiService.fetchAllByUrl(ApiSettings.reasonsConfigUrl).subscribe({
+      next: async (resp: any) => {
+        try {
+          const reasons = resp.Reasons
+          
+          await this.sharedService.insertDataToTable(reasons, getReasonsTableName)
+        } catch (error) {
+          alert('reasons' +JSON.stringify(error))
+        }
+      },
+      error: (error) => {
+        console.error(error);
+        this.success = false
+      }
+    })
   }
 
   async getDocsForReceivingMetaData() {
     const params = 'metadata'
-    this.metadataSubscription = this.apiService.fetchAllByUrl(ApiSettings.Docs4ReceivingUrl + params).subscribe({
+    this.D4RmetadataSubscription = this.apiService.fetchAllByUrl(ApiSettings.Docs4ReceivingUrl + params).subscribe({
       next: async (resp: any) => {
         if (resp) {
           try {
             this.loadDocsForReceiving = 'creating Table';
-            const baseQuery = `CREATE TABLE IF NOT EXISTS ${docsForReceivingTableName} ({}, PRIMARY KEY ({}));`;
-            const variablesPlaceHolders = resp.map((obj: any) => `${obj.name} ${this.mapTypeToSql(obj.type)}`).join(', ');
-            const primarykeyPlaceHolders = resp.filter((obj: any) => obj.primarykey === true).map((obj: any) => obj.name).join(', ');
-            this.docsForReceivingColumns = resp.map((obj: any) => obj.name);
-            const fullQuery = baseQuery.replace('{}', variablesPlaceHolders).replace('{}', primarykeyPlaceHolders);
-            await this.sqliteService.createTable(fullQuery, docsForReceivingTableName);
+            
+            await this.sharedService.createMetaDataTable(resp, docsForReceivingTableName);
+            
             this.loadDocsForReceiving = 'Inserting Data';
-            await this.getDocsForReceiving();
-            this.metadataLoaded = true;
+            await this.getDocsForReceivingData();
           } catch (error) {
-            // alert(JSON.stringify(error))
             this.loadDocsForReceiving = 'failed to create Table';
             this.uiProviderService.presentToast('Error', 'failed to create Docs For Receiving table', 'danger');
           }
@@ -99,17 +280,220 @@ export class ActivityPage implements OnInit, OnDestroy {
       }, error: (err) => {
         console.log(err);
         this.loadDocsForReceiving = 'failed to create Table';
+      }
+    })
+  }
+
+  async getDocsForReceivingData() {
+    this.loadDocsForReceivingStatus = true;
+    const params = `${this.organisation.InventoryOrgId_PK}/""/""`;
+    this.docsForReceivingSubscription = this.apiService.fetchAllByUrl(ApiSettings.Docs4ReceivingUrl + params).subscribe({
+      next: async (resp: any) => {
+        this.docs = resp.Docs4Receiving.length
+        try {
+          
+          await this.sharedService.insertDataToTableChunks(resp.Docs4Receiving, docsForReceivingTableName)
+          await this.apiService.setValue('isDocs4ReceivingTableEmpty', false);
+        } catch (error) {
+          alert('Docs4Receiving' +JSON.stringify(error))
+          this.loadDocsForReceiving = 'failed to create Table';
+          this.uiProviderService.presentToast('Error', 'Failed to load Docs4Receiving Table/data', 'danger');
+        }
+      },
+      error: (err) => {
+        console.log(err);
+      }
+    })
+  }
+
+  async getSubInventoryMetaData() {
+    const params = 'metadata'
+    this.subInvMetadataSubscription = this.apiService.fetchAllByUrl(ApiSettings.subInventoryUrl + params).subscribe({
+      next: async (resp: any) => {
+        if (resp) {
+          try {
+            this.loadSubInventoryMessage = 'creating Table';
+            
+            await this.sharedService.createMetaDataTable(resp, subInventoryTableName)
+            this.loadSubInventoryMessage = 'Inserting Data';
+            
+            await this.getSubInventoryData();
+            this.loadSubInventoryMessage = 'Sub Inventories created';
+          } catch (error) {
+            console.log(error);
+            alert('sub inventory' +JSON.stringify(error));
+            this.uiProviderService.presentToast('Error', 'failed to create sub inventory table', 'danger');
+          }
+        } else {
+          console.log('No metadata available');
+        }
+        }, error: (err) => {
+        console.log(err);
+        this.success = false
       },
       complete: () => {
-        setTimeout(() => {
-          if (this.metadataLoaded) {
-            this.loadDocsForReceiving = 'Table created Successfully';
-            this.navCtrl.navigateForward('/dashboard');
-          } else {
-            this.syncAgain = true;
+        this.loadSubInventoryStatus = false;
+      }
+    })
+  }
+
+  async getSubInventoryData() {
+    const params = `${this.organisation.InventoryOrgId_PK}/""/""`;
+    this.subInventorySubscription = this.apiService.fetchAllByUrl(ApiSettings.subInventoryUrl + params).subscribe({
+      next: async (resp: any) => {
+        if (resp) {
+          try {
+            const ActiveSubInventories = resp.ActiveSubInventories;
+            
+            await this.sharedService.insertDataToTable(ActiveSubInventories, subInventoryTableName);
+            this.subInventories = ActiveSubInventories.length;
+          } catch (error) {
+            alert('sub inventory data' +JSON.stringify(error))
+            this.uiProviderService.presentToast('Error', 'failed to create sub inventory table', 'danger');
           }
+        } else {
+          console.log('No metadata available');
+          this.uiProviderService.presentToast('Error', 'No metadata available for sub inventory', 'danger');
+        }
+      }, error: (err) => {
+        alert('sub inventory data api' +JSON.stringify(err))
+        this.uiProviderService.presentToast('Error', 'failed to get data from sub inventory api', 'danger');
+        this.success = false
+      }
+    })
+  }
+
+  async getLocatorsMetaData() {
+    const params = 'metadata'
+    this.locatorsMetaDataSubscription = this.apiService.fetchAllByUrl(ApiSettings.locatorsURL + params).subscribe({
+      next: async (resp: any) => {
+        try {
           
-        }, 1000)
+          await this.sharedService.createMetaDataTable(resp, locatorsTableName)
+          await this.getLocatorsData()
+        } catch (error) {
+          console.log(error)          
+        }
+      },
+      error: (error) => {
+        console.error(error)
+        this.uiProviderService.presentToast('Error', 'failed to create locators table', 'danger');
+        this.success = false
+      }
+    })
+  }
+
+  async getLocatorsData() {
+    const params = `${this.organisation.InventoryOrgId_PK}/${this.authService.lastLoginDate}/""`;
+    this.locatorsDataSubscription = this.apiService.fetchAllByUrl(ApiSettings.locatorsURL + params).subscribe({
+      next: async (resp: any) => {
+        try {
+          const ActiveLocators = resp.ActiveLocators
+        
+          await this.sharedService.insertDataToTable(ActiveLocators, locatorsTableName)
+        } catch (error) {
+          console.log(error)
+        }
+      },
+      error: (error) => {
+        console.error(error)
+        this.uiProviderService.presentToast('Error', 'failed to get locators table data', 'danger');
+        this.success = false
+      }
+    })
+  }
+
+  async getLotsMetaData() {
+    const params = 'metadata'
+    this.lotsMetaDataSubscription = this.apiService.fetchAllByUrl(ApiSettings.lotsUrl + params).subscribe({
+      next: async (resp: any) => {
+        if (resp) {
+          try {
+            await this.sharedService.createMetaDataTable(resp, lotsTableName)
+            
+            await this.getLotsData()
+          } catch (error) {
+            console.log(error)
+          }
+        } else {
+          console.log('No metadata available');
+          this.uiProviderService.presentToast('Error', 'No metadata available for lots', 'danger');
+        }
+      },
+      error: (error) => {
+        console.error(error)
+        this.success = false
+      }
+    })
+  }
+
+  async getLotsData() {
+    const params = `${this.organisation.InventoryOrgId_PK}/""`;
+    this.lotsDataSubscription = this.apiService.fetchAllByUrl(ApiSettings.lotsUrl + params).subscribe({
+      next: async (resp: any) => {
+        if (resp) {
+          try {
+            
+            await this.sharedService.insertDataToTableCSV(resp, lotsTableName)
+          } catch (error) {
+            console.log(error)
+          }
+        } else {
+          console.log('No metadata available');
+        }
+      },
+      error: (error) => {
+        console.error(error)
+        this.uiProviderService.presentToast('Error', 'failed to get lots table data', 'danger');
+        this.success = false
+      }
+    })
+  }
+
+  async getSerialsMetaData() {
+    const params = 'metadata'
+    this.serialsMetaDataSubscription = this.apiService.fetchAllByUrl(ApiSettings.serialsUrl + params).subscribe({
+      next: async (resp: any) => {
+        if (resp) {
+          try {
+            await this.sharedService.createMetaDataTable(resp, serialsTableName)
+           
+            await this.getSerialsData()
+          } catch (error) {
+            console.log(error)
+            this.uiProviderService.presentToast('Error', 'failed to create serials table', 'danger');
+          }
+        } else {
+          console.log('No metadata available');
+        }
+      },
+      error: (error) => {
+        console.error(error)
+        this.uiProviderService.presentToast('Error', 'failed to get serials table metadata', 'danger');
+        this.success = false
+      }
+    })
+  }
+
+  async getSerialsData() {
+    const params = `${this.organisation.InventoryOrgId_PK}/""/""/""`;
+    this.serialsDataSubscription = this.apiService.fetchAllByUrl(ApiSettings.serialsUrl + params).subscribe({
+      next: async (resp: any) => {
+        if (resp) {
+          try {
+            
+            await this.sharedService.insertDataToTableCSV(resp, serialsTableName)
+          } catch (error) {
+            console.log(error)
+          }
+        } else {
+          console.log('No metadata available');
+        }
+      },
+      error: (error) => {
+        console.error(error)
+        this.uiProviderService.presentToast('Error', 'failed to get serials table data', 'danger');
+        this.success = false
       }
     })
   }
@@ -119,107 +503,6 @@ export class ActivityPage implements OnInit, OnDestroy {
     this.syncAgain = false;
   }
 
-  mapTypeToSql(type: string) {
-    switch (type) {
-      case 'string':
-        return 'TEXT';
-      case 'number':
-        return 'INTEGER';
-      case 'boolean':
-        return 'BOOLEAN';
-      default:
-        return 'TEXT';
-    }
-  }
-
-  mapPrimaryKeyToSql(type: boolean) {
-    if (type) {
-      return 'PRIMARY KEY NOT NULL';
-    }
-    return '';
-  }
-
-  async getDocsForReceiving() {
-    this.loadDocsForReceivingStatus = true;
-    const params = `${this.organisation.InventoryOrgId_PK}/""/""`;
-    this.docsForReceivingSubscription = this.apiService.fetchAllByUrl(ApiSettings.Docs4ReceivingUrl + params).subscribe({
-      next: async (resp: any) => {
-        // const columns = Object.keys(resp.Docs4Receiving[0]) 
-        this.docs = resp.Docs4Receiving.length
-        try {
-          // await this.sqliteService.dropTable(docsForReceivingTableName);
-          // await this.createDocs4ReceivingTable(docsForReceivingTableName, columns);
-          const baseQuery = `INSERT OR IGNORE INTO ${docsForReceivingTableName} (${this.docsForReceivingColumns.join(',')}) VALUES {}`;
-          // alert(this.docsForReceivingColumns.length + ' ' + Object.values(resp.Docs4Receiving[0]).length)
-          const valuesPlaceHolders = Array(this.docs).fill(`(${this.docsForReceivingColumns.map(() => '?').join(',')})`)
-          // alert(valuesPlaceHolders + ' ' + valuesPlaceHolders.length)
-          const fullQuery = baseQuery.replace('{}', valuesPlaceHolders.join(','));
-          const flatDataDocs = resp.Docs4Receiving.flatMap((doc: any) => Object.values(doc));
-          // alert(flatDataDocs.length)
-          await this.sqliteService.insertData(fullQuery, flatDataDocs);
-          await this.apiService.setValue('isDocs4ReceivingTableEmpty', false);
-        } catch (error) {
-          alert(JSON.stringify(error))
-          this.uiProviderService.presentToast('Error', 'Failed to load Docs4Receiving Table/data', 'danger');
-        }
-        
-        // await resp.Docs4Receiving.forEach(async (element: any) => {
-        //   await this.sqliteService.insertData(`INSERT OR IGNORE INTO ${docsForReceivingTableName} (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`, Object.values(element));
-        // })
-        
-      },
-      error: (err) => {
-        console.log(err);
-      },
-      complete: () => {
-        this.loadDocsForReceivingStatus = false;
-        setTimeout(() => {
-          this.loadDocsForReceiving = 'Table created Successfully';
-          this.navCtrl.navigateForward('/dashboard');
-        }, 1000)
-      }
-    })
-  }
-
-  async getDataFromLocationsApi() {
-      this.loadLocationStatus = true;
-      this.locationsDataSubscription = this.apiService.fetchAllByUrl(ApiSettings.LocationsUrl).subscribe({
-        next: async (resp: any) => {
-          this.locationsData = resp
-          this.locations = this.locationsData.LocationList.length
-          this.locationsData.LocationList.forEach(async (element: any) => {
-            await this.sqliteService.insertData(`INSERT OR IGNORE INTO ${locationTableName} (id, location, lastUpdated) VALUES (?, ?, ?)`, [element.LocationId, element.Location, element.LastUpdateDate]);
-          });
-          this.apiService.isLocationsTableEmpty = false;
-          this.apiService.setValue('isLocationsTableEmpty', false);
-        },
-        error: (err) => {
-          console.log(err);
-        },
-        complete: () => {
-          this.loadLocationStatus = false;
-        }
-      })
-  }
-
-  async createDocs4ReceivingTable(table_name: string, columns: any) {
-    let createDocs4ReceivingTableQuery = `CREATE TABLE IF NOT EXISTS ${table_name} (${columns.join(',')})`;
-    await this.sqliteService.createTable(createDocs4ReceivingTableQuery, table_name);
-  }
-
-  async createLocationTable(table_name: string) {
-    let createLocationTableQuery = `CREATE TABLE IF NOT EXISTS ${table_name} (id INTEGER PRIMARY KEY, location TEXT, lastUpdated DATETIME DEFAULT CURRENT_TIMESTAMP)`;
-    await this.sqliteService.createTable(createLocationTableQuery, table_name);
-  }
-
-  async createHistoryTable(table_name: string) {
-    let createHistoryTableQuery = `CREATE TABLE IF NOT EXISTS ${table_name} (
-      id INTEGER PRIMARY KEY AUTOINCREMENT, 
-      location TEXT DEFAULT '', 
-      lastUpdated DATETIME DEFAULT CURRENT_TIMESTAMP, 
-      status TEXT)`;
-    await this.sqliteService.createTable(createHistoryTableQuery, table_name);
-  }
 
 
   async createTransactionHistoryTable(table_name: string) {
@@ -245,6 +528,14 @@ export class ActivityPage implements OnInit, OnDestroy {
     await this.sqliteService.createTable(createTransactionHistoryTableQuery, table_name);
   }
 
+  navigateToDashboard() {
+    if (this.success) {
+      this.navCtrl.navigateForward('/dashboard');
+    } else {
+      this.syncAgain = true
+    }
+  }
+
   async logout() {
     await this.apiService.clearStorage();
     this.sqliteService.dropAllTables();
@@ -258,8 +549,11 @@ export class ActivityPage implements OnInit, OnDestroy {
     if (this.docsForReceivingSubscription) {
       this.docsForReceivingSubscription.unsubscribe();
     }
-    if (this.metadataSubscription) {
-      this.metadataSubscription.unsubscribe();
+    if (this.D4RmetadataSubscription) {
+      this.D4RmetadataSubscription.unsubscribe();
+    }
+    if (this.subInvMetadataSubscription){
+      this.subInvMetadataSubscription.unsubscribe();
     }
   }
 }

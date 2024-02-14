@@ -1,6 +1,5 @@
 import { Injectable } from '@angular/core';
 import { Network } from '@capacitor/network';
-import { Platform } from '@ionic/angular';
 import { BehaviorSubject, Observable, interval } from 'rxjs';
 import { UiProviderService } from './ui-provider.service';
 

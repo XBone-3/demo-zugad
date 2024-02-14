@@ -6,6 +6,7 @@ import { Subscription } from 'rxjs';
 import {
   docsForReceivingTableName
 } from 'src/app/CONSTANTS/CONSTANTS';
+import { NodeApiService } from 'src/app/providers/node-api.service';
 
 @Component({
   selector: 'app-items',
@@ -23,14 +24,17 @@ export class ItemsPage implements OnInit, OnDestroy {
   constructor(
     private sqliteService: SqliteService,
     private navCtrl: NavController,
-    private activatedRoute: ActivatedRoute
+    private activatedRoute: ActivatedRoute,
+    private apiService: NodeApiService
   ) { }
 
-  ngOnInit() {
+  async ngOnInit() {
+    
     this.activatedRouteSub = this.activatedRoute.queryParams.subscribe((data)=>{
       this.doc = data['doc'];
     })
-    this.getPoFromDb();
+    this.doc = await this.apiService.getValue('selectedPo')
+    await this.getPoFromDb();
   }
 
   async getPoFromDb() {
@@ -61,7 +65,8 @@ export class ItemsPage implements OnInit, OnDestroy {
     })
   }
 
-  goToItemDetails(item: any) {
+  async goToItemDetails(item: any) {
+    await this.apiService.setValue('selectedItem', item);
     this.navCtrl.navigateForward('/goods-receipt/item-details', {
       queryParams: {
         item

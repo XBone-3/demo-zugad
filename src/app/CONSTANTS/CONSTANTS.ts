@@ -4,6 +4,14 @@ export const historyTableName = "history";
 export const userDetailsTableName = "user_details";
 export const docsForReceivingTableName = "docs_for_receiving";
 export const transactionTableName = "transaction_history";
+export const subInventoryTableName = "sub_inventory";
+export const getReasonsTableName = "get_reasons";
+export const locatorsTableName = "locators"
+export const glPeriodsTableName = "gl_periods";
+export const inventoryPeriodsTableName = "inventory_periods";
+export const purchasingPeriodsTableName = "purchasing_periods";
+export const lotsTableName = "lots";
+export const serialsTableName = "serials";
 
 
 export interface LocationInterface {

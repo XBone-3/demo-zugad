@@ -63,27 +63,27 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   async ionViewDidEnter() {
-    try {
-      const location_data  = await this.sqliteService.getDataFromTable(locationTableName)
-      if (location_data.rows.length > 0) {
-        this.totalRecords = location_data.rows.length;
-      } else {
-        this.totalRecords = '0';
-      }
-    } catch (error) {
-      this.totalRecords = '0';
-    }
+    // try {
+    //   const location_data  = await this.sqliteService.getDataFromTable(locationTableName)
+    //   if (location_data.rows.length > 0) {
+    //     this.totalRecords = location_data.rows.length;
+    //   } else {
+    //     this.totalRecords = '0';
+    //   }
+    // } catch (error) {
+    //   this.totalRecords = '0';
+    // }
     
-    try {
-      const history_data = await this.sqliteService.getDataFromTable(historyTableName)
-      if (history_data.rows.length > 0) {
-        this.totalHistory = history_data.rows.length;
-      } else {
-        this.totalHistory = '0';
-      }
-    } catch (error) {
-      this.totalHistory = '0';
-    }
+    // try {
+    //   const history_data = await this.sqliteService.getDataFromTable(historyTableName)
+    //   if (history_data.rows.length > 0) {
+    //     this.totalHistory = history_data.rows.length;
+    //   } else {
+    //     this.totalHistory = '0';
+    //   }
+    // } catch (error) {
+    //   this.totalHistory = '0';
+    // }
     
     try {
       const trans_data = await this.sqliteService.getDataFromTable(transactionTableName)
@@ -99,8 +99,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     const query = `SELECT PoNumber, PoType, VendorName, LastUpdateDate FROM ${docsForReceivingTableName} 
                     WHERE SourceTypeCode='PO' 
                     And 
-                    PoNumber IS NOT NULL 
-                    GROUP BY PoNumber 
+                    PoNumber IS NOT NULL  
                     ORDER BY PoNumber`;
     try {
       const docs_4_rec_data = await this.sqliteService.executeCustonQuery(query)

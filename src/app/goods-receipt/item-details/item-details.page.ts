@@ -1,13 +1,14 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { NodeApiService } from 'src/app/providers/node-api.service';
 import { SqliteService } from 'src/app/providers/sqlite.service';
+import { AuthService } from 'src/app/login/auth.service';
 import { UiProviderService } from 'src/app/providers/ui-provider.service';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { transactionTableName, docsForReceivingTableName } from 'src/app/CONSTANTS/CONSTANTS';
 import { ApiSettings } from 'src/app/CONSTANTS/api-settings';
 import { NetworkService } from 'src/app/providers/network.service';
-import { formatDate } from '@angular/common';
+import { NavController } from '@ionic/angular';
 
 @Component({
   selector: 'app-item-details',
@@ -19,12 +20,17 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
   item!: any
   private activatedSubscription!: Subscription;
   QtyReceiving: string = '';
+  subInvName: string = '';
+  locator: string = '';
+  lot: string = '';
+  subInv: any;
   userDetails: any;
   selectedOrg: any;
   orgDetails: boolean = false;
   useravailable: boolean = false;
   postitemSubscription!: Subscription;
   networkSubscription!: Subscription;
+  enableLot: boolean = false;
   apiResponse: any;
   hasNetwork: boolean = false;
   docsForReceivingSubscription!: Subscription;
@@ -34,7 +40,9 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
     private sqliteService: SqliteService,
     private uiProviderService: UiProviderService,
     private activatedRoute: ActivatedRoute,
-    private networkService: NetworkService
+    private networkService: NetworkService,
+    private navCtrl: NavController,
+    private authService: AuthService
   ) { 
     this.apiService.getValue('loginData').then((val) => {
       this.userDetails = val[0];
@@ -46,15 +54,28 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
     })
   }
 
-  ngOnInit() {
+  async ngOnInit() {
+    
     this.activatedSubscription = this.activatedRoute.queryParams.subscribe((data) => {
       this.item = data['item']
+      this.subInv = data['inventory']
     })
-
+    this.item = await this.apiService.getValue('selectedItem')
     this.networkSubscription = this.networkService.isNetworkAvailable().subscribe((networkStatus) => {
       this.hasNetwork = networkStatus
     })
 
+  }
+
+  async ionViewWillEnter() {
+    this.activatedSubscription = this.activatedRoute.queryParams.subscribe((data) => {
+      this.item = data['item']
+      this.subInv = data['inventory']
+    })
+    this.item = await this.apiService.getValue('selectedItem')
+    this.networkSubscription = this.networkService.isNetworkAvailable().subscribe((networkStatus) => {
+      this.hasNetwork = networkStatus
+    })
   }
 
   async insertTransaction(response: any) {
@@ -105,7 +126,7 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
               else {
                 this.uiProviderService.presentToast('Error', response[0].Message, 'danger');
               }
-              this.getDocsForReceiving();
+              await this.getDocsForReceiving();
             },
             error: (error) => {
               console.log("error while performing post transaction: ",error)
@@ -144,10 +165,12 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
     // const params = `${this.selectedOrg.InventoryOrgId_PK}/""/""`;
     this.docsForReceivingSubscription = this.apiService.fetchAllByUrl(ApiSettings.Docs4ReceivingUrl + params).subscribe({
       next: async (resp: any) => {
+        if (resp) {
+          
           const columns = Object.keys(resp.Docs4Receiving[0])
           try {
             await resp.Docs4Receiving.forEach(async (element: any) => {
-              if (element.Flag === 'D') {
+              if (element["Flag"] === 'D') {
                 await this.sqliteService.executeCustonQuery(`DELETE FROM ${docsForReceivingTableName} WHERE OrderLineId=? AND PoLineLocationId=? AND ShipmentLineId=?`, [element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);
               } else {
                 await this.sqliteService.insertData(`INSERT OR REPLACE INTO ${docsForReceivingTableName} (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`, Object.values(element));
@@ -156,7 +179,10 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
           } catch (error) {
             console.log('error in performDeltaSync: ', error);
           }
-        
+        } else {
+          alert(JSON.stringify(resp))
+          console.log('error in performDeltaSync: ', resp);
+        }
         }, error: (err) => {
           console.log('error in performDeltaSync: ', err);
         }
@@ -165,9 +191,18 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
 
   async generateParams() {
     const orgId = await this.apiService.getValue('orgId')
-    const formattedDate = formatDate(new Date(), "dd-MM-yyyy HH:mm:ss", "en-US")
+    // const formattedDate = formatDate(new Date(), "dd-MM-yyyy HH:mm:ss", "en-US")
+    const formattedDate = this.authService.lastLoginDate
     return `${orgId}/"${formattedDate}"/"N"`
    }
+
+  fetchSubInv(inv: any) {
+    alert(JSON.stringify(inv))
+  }
+
+  async fetchSubLoc() {
+
+  }
 
   ngOnDestroy() {
     if (this.activatedSubscription) {

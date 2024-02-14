@@ -16,4 +16,12 @@ export class ApiSettings {
     static Docs4ReceivingUrl = `${node_url}EBS/20D/getDocumentsForReceiving/`;
     static MoveOrdersUrl = `${node_url}EBS/20D/getMoveOrders/`;
     static createGoodsReceiptUrl = `${node_url}EBS/20D/createGoodsReceiptTransactions`;
+    static subInventoryUrl = `${node_url}EBS/20D/getSubinventories/`;
+    static reasonsConfigUrl = `${node_url}EBS/20D/getreasons/`
+    static locatorsURL = `${node_url}EBS/20D/getLocators/`
+    static glPeriodsUrl = `${node_url}EBS/20D/getGLPeriods/`
+    static inventoryPeriodsUrl = `${node_url}EBS/20D/getInventoryPeriods/`
+    static purchasingeriodsUrl = `${node_url}EBS/20D/getPurchasingPeriods/`
+    static lotsUrl = `${node_url}EBS/22A/getLotsTableType/`
+    static serialsUrl = `${node_url}EBS/22A/getSerialTableType/`
 }

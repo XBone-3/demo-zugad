@@ -31,7 +31,12 @@ export class GoodsReceiptPage implements OnInit {
   }
 
   async paginationData() {
-    const query = `SELECT * FROM ${docsForReceivingTableName} WHERE PONUMBER IS NOT NULL AND POHEADERID IS NOT NULL AND IsLocatorRestricted='False' AND IsLotControlled='False' AND IsSerialControlled='False' LIMIT 10 OFFSET ${ this.offset };`
+    const query = `SELECT * FROM ${docsForReceivingTableName} 
+    WHERE PONUMBER IS NOT NULL 
+    AND 
+    POHEADERID IS NOT NULL 
+    LIMIT 10 
+    OFFSET ${ this.offset };`
     const paginated_data = await this.sqliteService.executeCustonQuery(query)
     if( paginated_data.rows.length > 0 ){
       for (let i = 0; i < paginated_data.rows.length; i++) {
@@ -51,19 +56,19 @@ export class GoodsReceiptPage implements OnInit {
   
   loadMoreData(event: any) {
     this.offset += 10;
-    console.log("this.offset", this.offset);
     this.paginationData();
     event.target.complete();
   }
 
   onSearch() {
-    this.receipts = this.docsForReceiving.filter((doc) => {
-      return (doc.PO_NUMBER.toLowerCase().indexOf(this.searchText.toLowerCase()) > -1);
+    console.log(typeof this.searchText);
+    this.receipts = this.docsForReceiving.filter((item) => {
+      return (item.PO_NUMBER.toLowerCase().indexOf(this.searchText.toLowerCase()) > -1);
     })
   }
 
   async goToItems(doc: PoInterface) {
-    this.apiService.setValue('selectedPo', doc);
+    await this.apiService.setValue('selectedPo', doc);
     this.navCtrl.navigateForward('/goods-receipt/items', {
       queryParams: {
         doc

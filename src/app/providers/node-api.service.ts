@@ -6,6 +6,7 @@ import { interval } from 'rxjs';
 import { SqliteService } from './sqlite.service';
 import { formatDate } from '@angular/common';
 import { docsForReceivingTableName } from '../CONSTANTS/CONSTANTS';
+import { AuthService } from '../login/auth.service';
 
 @Injectable({
   providedIn: 'root'
@@ -32,14 +33,15 @@ export class NodeApiService {
   constructor(
     private http: HttpClient,
     private storage: Storage,
-    private sqliteService: SqliteService
+    private sqliteService: SqliteService,
+    private authService: AuthService
   ) {
     this.storage.create();
     this.storage.set('isAllOrgTableData', false);
     this.performDeltaSync(this.intervalDuration);
    }
 
-   performDeltaSync(intervalDuration: number) {
+   async performDeltaSync(intervalDuration: number) {
     interval(intervalDuration).subscribe(async () => {
       const params = await this.generateParams();
       this.fetchAllByUrl(ApiSettings.Docs4ReceivingUrl + params).subscribe({
@@ -59,6 +61,7 @@ export class NodeApiService {
           } catch (error) {
             console.log('error in performDeltaSync: ', error);
           }
+          this.authService.lastLoginDate = formatDate(new Date(), "dd-MM-yyyy HH:mm:ss", "en-US")
         
         }, error: (err) => {
           console.log('error in performDeltaSync: ', err);
@@ -74,7 +77,8 @@ export class NodeApiService {
 
    async generateParams() {
     const orgId = await this.getValue('orgId')
-    const formattedDate = formatDate(new Date(), "dd-MM-yyyy HH:mm:ss", "en-US")
+    // const formattedDate = formatDate(new Date(), "dd-MM-yyyy HH:mm:ss", "en-US")
+    const formattedDate = this.authService.lastLoginDate
     return `${orgId}/"${formattedDate}"/"N"`
    }
 
@@ -99,21 +103,17 @@ export class NodeApiService {
    }
 
    fetchLoginData(params: any) {
-    // return a subject
      return this.http.post(this.loginUrl, params);
    }
 
    performPostWithHeaders(url: string, body: any, headers: any) {
-     // return a subject
      return this.http.post(url, body, headers);
    }
    performPost(url: string, body: any) {
-     // return a subject
      return this.http.post(url, body);
    }
 
    fetchAllOrgTables() {
-     // return a subject
      return this.http.get(ApiSettings.InventoryOrgUrl, {responseType: 'json'});
    }
 

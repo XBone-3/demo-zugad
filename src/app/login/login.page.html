@@ -1,36 +1,41 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>login</ion-title>
-  </ion-toolbar>
-</ion-header>
-
 <ion-content [fullscreen]="true">
-  <form [formGroup]="form" class="ion-padding">
-    <ion-grid>
-      <ion-row class="ion-justify-content-center">
-        <ion-col col="12">
-          <ion-icon name="person" col="1" color="primary"></ion-icon>
-          <ion-input type="text" placeholder="Username" col="10" formControlName="username"></ion-input>
-        </ion-col>
-      </ion-row>
-      <ion-row class="ion-justify-content-center">
-        <ion-col col="12">
-          <ion-icon name="lock-closed" col="1" color="primary"></ion-icon>
-          <ion-input [type]= "showPassword? 'text': 'password'" placeholder="Password" col="10" formControlName="password">
-            <ion-icon [name]="showPassword? 'eye': 'eye-off'" (click)="showPassword = !showPassword" col="1" slot="end"></ion-icon>
-          </ion-input>
-        </ion-col>
-      </ion-row>
-      <ion-row class="ion-justify-content-center">
-        <ion-col col="12">
-          <ion-button type="submit" expand="block" (click)="login()" [disabled]="!form.valid">Login</ion-button>
-        </ion-col>
-      </ion-row>
-      <ion-row class="ion-justify-content-center">
-        <ion-col col="12">
-          <ion-button type="submit" expand="block" fill="outline" (click)="fillDetails()">Fill Details</ion-button>
-        </ion-col>
-      </ion-row>
-    </ion-grid>
-  </form>
+  <div class="vertical-sections">
+    <div class="main-title ion-text-center">
+      <h1>Mobile Supply Chain</h1>
+    </div>
+    <div class="form">
+      <form [formGroup]="form" class="ion-padding">
+        <ion-grid>
+          <ion-row class="ion-justify-content-center">
+            <ion-col col="12">
+              <ion-icon name="person" col="1" color="primary"></ion-icon>
+              <ion-input type="text" placeholder="Username" col="10" formControlName="username"></ion-input>
+            </ion-col>
+          </ion-row>
+          <ion-row class="ion-justify-content-center">
+            <ion-col col="12">
+              <ion-icon name="lock-closed" col="1" color="primary"></ion-icon>
+              <ion-input [type]= "showPassword? 'text': 'password'" placeholder="Password" col="10" formControlName="password">
+                <ion-icon [name]="showPassword? 'eye': 'eye-off'" (click)="showPassword = !showPassword" col="1" slot="end"></ion-icon>
+              </ion-input>
+            </ion-col>
+          </ion-row>
+          <ion-row class="ion-justify-content-center">
+            <ion-col col="12">
+              <ion-button type="submit" expand="block" (click)="login()" [disabled]="!form.valid">Login</ion-button>
+            </ion-col>
+          </ion-row>
+          <ion-row class="ion-justify-content-center">
+            <ion-col col="12">
+              <ion-button type="submit" expand="block" fill="outline" (click)="fillDetails()">Fill Details</ion-button>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+      </form>
+    </div>
+    <div class="logo">
+      
+    </div>
+  </div>
+  
 </ion-content>

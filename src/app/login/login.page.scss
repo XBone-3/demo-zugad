@@ -1,0 +1,17 @@
+.vertical-sections {
+    display: flex;
+    flex-direction: column;
+    height: 100vh; /* Make it full height */
+  }
+  
+  .main-title {
+    flex: 1; /* Divide equally among sections */
+    text-align: center; /* Center content in each section */
+    font-size: larger;
+    padding-top: 10vh;
+  }
+  
+  .form {
+    /* Style your form as desired */
+    flex: 4;
+  }

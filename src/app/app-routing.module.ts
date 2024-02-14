@@ -53,6 +53,10 @@ const routes: Routes = [
   {
     path: 'trans-hist',
     loadChildren: () => import('./trans-hist/trans-hist.module').then( m => m.TransHistPageModule)
+  },
+  {
+    path: 'sub-inventory',
+    loadChildren: () => import('./sub-inventory/sub-inventory.module').then( m => m.SubInventoryPageModule)
   }
   
 ];
