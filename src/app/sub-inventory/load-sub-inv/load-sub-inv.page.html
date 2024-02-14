@@ -1,0 +1,20 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons>
+      <ion-back-button slot="start" defaultHref="/goods-receipt/item-details"></ion-back-button>
+      <ion-title>load-sub-inv</ion-title>
+    </ion-buttons>
+    
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-list>
+    <ion-item *ngFor="let inv of ActiveSubInventories" (click)="onSelectInv(inv)">
+      <ion-label>
+        <h2>{{ inv.SubInventoryCode }}</h2>
+        <p>{{ inv.SubInventoryDesc }}</p>
+      </ion-label>
+    </ion-item>
+  </ion-list>
+</ion-content>
