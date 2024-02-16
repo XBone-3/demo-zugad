@@ -57,6 +57,14 @@ const routes: Routes = [
   {
     path: 'sub-inventory',
     loadChildren: () => import('./sub-inventory/sub-inventory.module').then( m => m.SubInventoryPageModule)
+  },
+  {
+    path: 'common-shared-list-page',
+    loadChildren: () => import('./common-shared-list-page/common-shared-list-page.module').then( m => m.CommonSharedListPagePageModule)
+  },
+  {
+    path: 'lot-list',
+    loadChildren: () => import('./lot-list/lot-list.module').then( m => m.LotListPageModule)
   }
   
 ];

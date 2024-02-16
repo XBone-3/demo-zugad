@@ -24,4 +24,6 @@ export class ApiSettings {
     static purchasingeriodsUrl = `${node_url}EBS/20D/getPurchasingPeriods/`
     static lotsUrl = `${node_url}EBS/22A/getLotsTableType/`
     static serialsUrl = `${node_url}EBS/22A/getSerialTableType/`
+    static uomUrl = `${node_url}EBS/20D/getUnitOfMeasuresConversions/`
+    static revisionsUrl = `${node_url}EBS/20D/getItemRevisions/`
 }

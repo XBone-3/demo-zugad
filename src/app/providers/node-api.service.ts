@@ -43,7 +43,7 @@ export class NodeApiService {
 
    async performDeltaSync(intervalDuration: number) {
     interval(intervalDuration).subscribe(async () => {
-      const params = await this.generateParams();
+      const params = this.generateParams();
       this.fetchAllByUrl(ApiSettings.Docs4ReceivingUrl + params).subscribe({
         next: async (resp: any) => {
           const columns = Object.keys(resp.Docs4Receiving[0])
@@ -56,6 +56,14 @@ export class NodeApiService {
                 await this.sqliteService.executeCustonQuery(`DELETE FROM ${docsForReceivingTableName} WHERE OrderLineId=? AND PoLineLocationId=? AND ShipmentLineId=?`, [element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);
               } else {
                 await this.sqliteService.insertData(`INSERT OR REPLACE INTO ${docsForReceivingTableName} (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`, Object.values(element));
+                const updateQuery = `
+                  UPDATE ${docsForReceivingTableName} 
+                  SET QtyOrdered = ?, QtyReceived = ?, QtyRemaining = ?
+                  WHERE OrderLineId = ?
+                  AND PoLineLocationId = ?
+                  AND ShipmentLineId = ?;`;
+
+              await this.sqliteService.executeCustonQuery(updateQuery, [element['QtyOrdered'], element['QtyReceived'], element['QtyRemaining'], element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);
               }
             })
           } catch (error) {
@@ -70,13 +78,13 @@ export class NodeApiService {
     })
      
   }
-   async createDocs4ReceivingTable(table_name: string, columns: any) {
-    let createDocs4ReceivingTableQuery = `CREATE TABLE IF NOT EXISTS ${table_name} (${columns.join(',')})`;
-    await this.sqliteService.createTable(createDocs4ReceivingTableQuery, table_name);
-  }
+  //  async createDocs4ReceivingTable(table_name: string, columns: any) {
+  //   let createDocs4ReceivingTableQuery = `CREATE TABLE IF NOT EXISTS ${table_name} (${columns.join(',')})`;
+  //   await this.sqliteService.createTable(createDocs4ReceivingTableQuery, table_name);
+  // }
 
-   async generateParams() {
-    const orgId = await this.getValue('orgId')
+   generateParams() {
+    const orgId = localStorage.getItem('orgId_pk');
     // const formattedDate = formatDate(new Date(), "dd-MM-yyyy HH:mm:ss", "en-US")
     const formattedDate = this.authService.lastLoginDate
     return `${orgId}/"${formattedDate}"/"N"`

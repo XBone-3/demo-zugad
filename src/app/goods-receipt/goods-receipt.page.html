@@ -9,7 +9,7 @@
   </ion-buttons>
   </ion-toolbar>
   <ion-toolbar>
-    <ion-searchbar show-clear-button="always" clear-icon="trash-bin" [(ngModel)]="searchText" (ionInput)="onSearch()" (ionChange)="onSearch()"></ion-searchbar>
+    <ion-searchbar show-clear-button="always" clear-icon="trash-bin" [(ngModel)]="searchText" (ionInput)="onSearch($event)" (ionChange)="onSearch($event)"></ion-searchbar>
   </ion-toolbar>
 </ion-header>
 
@@ -21,13 +21,13 @@
       <ion-card>
         <ion-buttons>
         <ion-card-header>
-          <ion-label color="secondary">{{ receipt.PO_NUMBER }}</ion-label>
-          <ion-label>{{ receipt.PO_TYPE }}</ion-label>
+          <ion-label color="secondary">{{ receipt.PoNumber }}</ion-label>
+          <ion-label>{{ receipt.PoType }}</ion-label>
         </ion-card-header>
         <ion-card-content>
-          <p>VendorName: {{ receipt.VENDOR_NAME }}</p>
-          <p>Last Updated: {{ receipt.LAST_UPDATE_DATE }}</p>
-          <p>Items: {{ receipt.TOTAL }}</p>
+          <p>VendorName: {{ receipt.VendorName }}</p>
+          <p>Last Updated: {{ receipt.LastUpdateDate }}</p>
+          <!-- <p>Items: {{ receipt.TOTAL }}</p> -->
         </ion-card-content>
         <ion-button slot="end" (click)="goToItems(receipt)">
           <ion-icon name="chevron-forward-outline" slot="icon-only"></ion-icon>

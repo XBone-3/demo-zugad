@@ -39,7 +39,7 @@ export class DashboardPage implements OnInit, OnDestroy {
 
     this.responsibilities = await this.getResponsibilities();
 
-    this.activatedSubscription = this.activatedRoute.paramMap.subscribe((paramMap) => {
+    this.activatedSubscription = this.activatedRoute.paramMap.subscribe( async (paramMap) => {
       if (!paramMap.has('id')) {
         this.closeMenu();
         return;
@@ -48,13 +48,13 @@ export class DashboardPage implements OnInit, OnDestroy {
       const id = paramMap.get('id');
 
       if (id === 'logout') {
-        this.logout();
+        await this.logout();
         return;
       }
 
       if (id === 'logout-clear') {
-        this.logout();
-        this.apiService.clearStorage();
+        await this.logout();
+        await this.apiService.clearStorage();
         return;
       }
 

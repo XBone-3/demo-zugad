@@ -31,7 +31,10 @@ export class SelectOrgPage implements OnInit, OnDestroy {
   ) { }
 
   async ngOnInit() {
-    
+    await this.getAllOrgs();
+  }
+
+  async getAllOrgs() {
     this.isAllOrgTableData = await this.apiService.getValue('isAllOrgTableData')
     let org_id = await this.apiService.getValue('orgId')
     this.uiproviderService.presentLoading('Loading...');
@@ -72,7 +75,6 @@ export class SelectOrgPage implements OnInit, OnDestroy {
       console.log("allOrgTableData already loaded");
       this.uiproviderService.dismissLoading();
     }
-    
   }
 
   onSearch() {
@@ -91,10 +93,18 @@ export class SelectOrgPage implements OnInit, OnDestroy {
     console.log("selectedOrg", this.selectedOrg);
     if (this.selectedOrg) {
       await this.apiService.setValue('selectedOrg', this.selectedOrg);
+      localStorage.setItem('orgId_pk', this.selectedOrg.InventoryOrgId_PK);
       await this.apiService.setValue('selectedOrgId', this.selectedOrg.InventoryOrgCode);
       this.navCtrl.navigateForward('/activity');
     }
     // this.router.navigate(['/activity']);
+  }
+
+  onPullRefresh(event: any) {
+    setTimeout(() => {
+      this.getAllOrgs();
+      event.target.complete();
+    }, 2000);
   }
 
   ngOnDestroy(): void {

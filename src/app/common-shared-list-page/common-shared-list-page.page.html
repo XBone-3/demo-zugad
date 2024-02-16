@@ -1,0 +1,266 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="goBack()">
+        <ion-icon name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>{{this.receivedItemMsg[0]==="UOM"?"Uom Conversion":
+      this.receivedItemMsg[0]==="LOT-CONTROLLED"?(this.receivedItemMsg[2]?.ItemNumber + "-Lots"):
+      this.receivedItemMsg[0]==="LOCATOR"?"Locators":
+      this.receivedItemMsg[0]==="SUB-INV"?
+      "Sub-Inventory":this.receivedItemMsg[0]==="SERIAL-CONTROLLED"?(this.receivedItemMsg[2]?.ItemNumber + "-Serial"):
+      this.receivedItemMsg[0]==="REV"?"Item Revision":" "}}</ion-title>
+
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ng-container [ngTemplateOutlet]="templateIdentifier"></ng-container>
+  <ng-template #uomTemplate>
+    <ion-list>
+      <ion-item *ngFor="let option of commonList" (click)="onModalClose(option.BaseUOMCode)">
+        <ion-label>
+          <label for="org-{{option.UOMConvDesc}}">Conv. UOM:{{ option.UOMConvDesc }}</label>
+          <br />
+          <label for="org-{{option.ConversionRate}}">Conv. Rate:{{ option.ConversionRate }}</label>
+        </ion-label>
+      </ion-item>
+    </ion-list>
+  </ng-template>
+  <ng-template #subInvTemplate>
+    <ion-list>
+      <ion-item>
+        <ion-searchbar placeholder="Search" (ionInput)="onSearch($event)" (ionChange)="onSearch($event)"
+          (ionClear)="onClearSearch($event)"></ion-searchbar>
+      </ion-item>
+      <ion-item *ngFor="let option of commonList" (click)="onModalClose(option.SubInventoryCode)">
+        <ion-label>
+          <label for="org-{{option.SubInventoryCode}}">{{ option.SubInventoryCode }}</label>
+          <br />
+          <label for="org-{{option.SubInventoryDesc}}">{{ option.SubInventoryDesc }}</label>
+        </ion-label>
+      </ion-item>
+    </ion-list>
+  </ng-template>
+
+  <ng-template #locTemplate>
+    <ion-list>
+      <ion-item>
+        <ion-item>
+          <ion-searchbar placeholder="Search" (ionInput)="onSearchLoc($event)" (ionChange)="onSearchLoc($event)"
+            (ionClear)="onClearLocSearch($event)"></ion-searchbar>
+        </ion-item>
+      </ion-item>
+      <ion-item *ngFor="let option of commonList" (click)="onModalClose(option.Locator)">
+        <ion-label>
+          <label for="org-{{option.Locator}}">{{ option.Locator }}</label>
+        </ion-label>
+      </ion-item>
+    </ion-list>
+  </ng-template>
+
+  <ng-template #lotTemplate>
+    <ion-card>
+      <div class="card-header">
+        <ion-card-subtitle>PO#{{ this.receivedItemMsg[2]?.PoNumber }}</ion-card-subtitle>
+        <ion-label>{{ this.receivedItemMsg[3] }} Ea</ion-label>
+      </div>
+      <ion-card-title>{{ this.receivedItemMsg[2]?.ItemDesc }}</ion-card-title>
+    </ion-card>
+
+    <ion-card *ngFor="let section of sections;let i=index;">
+      <ion-card-content>
+        <form [formGroup]="section">
+          <ion-row>
+            <ion-col size="4">
+              <ion-label>
+                Lot1Qty (Ea)
+              </ion-label>
+            </ion-col>
+
+            <ion-col size="6">
+              <ion-item>
+                <ion-input formControlName="lotQuantity" (ionChange)="updateTotalQuantity()"
+                  placeholder="Enter Quantity"></ion-input>
+              </ion-item>
+            </ion-col>
+
+            <ion-col size="2" *ngIf="section.get('lotQuantity')?.value">
+              <ion-label>
+                <ion-icon (click)="removeSection(i)" name="trash-outline"></ion-icon>
+              </ion-label>
+            </ion-col>
+          </ion-row>
+          <ion-row>
+            <ion-col size="4">
+              <ion-label>
+                Lot :
+              </ion-label>
+            </ion-col>
+
+            <ion-col size="6">
+              <ion-item>
+                <ion-input formControlName="lotCode" placeholder="Enter Lot number"></ion-input>
+              </ion-item>
+            </ion-col>
+
+            <ion-col size="2">
+              <ion-icon name="chevron-forward-outline" (click)="onLotSelect()"></ion-icon>
+            </ion-col>
+          </ion-row>
+          <!-- <ion-row>
+            <ion-col size="4">
+              <ion-label>
+                Lot Attribute :
+              </ion-label>
+            </ion-col>
+            <ion-col size="4">
+
+            </ion-col>
+            <ion-col size="4">
+              <ion-label>
+                <ion-icon name="chevron-forward-outline"></ion-icon>
+              </ion-label>
+            </ion-col>
+          </ion-row> -->
+        </form>
+      </ion-card-content>
+    </ion-card>
+    <!-- <ion-list style="background-color: lightblue;" *ngIf="true">
+      <ion-row style="background-color: lightblue;">
+        <ion-item>
+          <ion-col size="4">
+            <ion-label>Serial</ion-label>
+          </ion-col>
+          <ion-col size="4">
+            <ion-item>
+              <ion-input readonly="true"></ion-input>
+            </ion-item>
+          </ion-col>
+          <ion-col size="2">
+            <ion-icon name="chevron-forward-outline" (click)="goToCommonListPage('SERIAL')"></ion-icon>
+          </ion-col>
+        </ion-item>
+      </ion-row>
+    </ion-list> -->
+
+    <ion-row>
+      <ion-col size="12" class="ion-text-center">
+        <ion-button *ngIf="totalLotTypedQuantity !== maxTotalQuantity" (click)="addSection()">
+          Add More
+        </ion-button>
+      </ion-col>
+    </ion-row>
+
+    <!-- <ion-footer>
+      <ion-buttons>
+        <ion-button [disabled]="totalLotTypedQuantity !== maxTotalQuantity" (click)="onModalClose(sections)">
+          Done
+        </ion-button>
+      </ion-buttons>
+    </ion-footer> -->
+  </ng-template>
+
+
+
+  <ng-template #serialTemplate>
+    <ion-card>
+      <div class="card-header">
+        <ion-card-subtitle>PO#{{ this.receivedItemMsg[2]?.PoNumber }}</ion-card-subtitle>
+        <ion-label>{{ this.receivedItemMsg[3] }} Ea</ion-label>
+      </div>
+      <ion-card-title>{{ this.receivedItemMsg[2]?.ItemDesc }}</ion-card-title>
+    </ion-card>
+
+    <ion-list>
+      <ion-item class="ion-margin">
+        <ion-label> Serial# </ion-label>
+        <ion-input type="text" [(ngModel)]="serialNum" (ionInput)="onSerialSelect($event)"
+          placeholder="Scan Serial"></ion-input>
+      </ion-item>
+
+      <ion-item class="ion-margin">
+        <table>
+          <tr>
+            <th>Min Serial</th>
+            <th>Max Serial</th>
+            <th>Quantity</th>
+          </tr>
+          <tr>
+            <th>
+              <ion-input type="text" placeholder="Min Serial"></ion-input>
+            </th>
+            <th>
+              <ion-input type="text" placeholder="Max Serial"></ion-input>
+            </th>
+            <th><ion-input type="text" placeholder="Qty"></ion-input></th>
+          </tr>
+        </table>
+      </ion-item>
+
+      <ion-list class="ion-margin">
+        <ion-item *ngFor="let option of serialList;let index">
+          <ion-label class="ion-text-start">
+            <label for="org-{{option}}">{{ option}}</label>
+          </ion-label>
+          <ion-label class="ion-text-end">
+            <ion-icon (click)="deleteSerial(index)" name="trash-outline"></ion-icon>
+          </ion-label>
+        </ion-item>
+      </ion-list>
+    </ion-list>
+
+    <!-- <ion-footer>
+      <ion-toolbar>
+        <ion-buttons>
+          <ion-button [disabled]="serialList.length!==this.receivedItemMsg[3]" (click)="onModalClose(serialList)"
+            expand="block" size="medium" shape="round">
+            Done
+          </ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-footer> -->
+  </ng-template>
+
+
+
+
+  <ng-template #revisionTemplate>
+    <ion-list>
+      <ion-item *ngFor="let option of commonList" (click)="onModalClose(option.ItemRevision)">
+        <ion-label>
+          <label for="org-{{option.ItemRevision}}">{{ option.ItemRevision }}</label>
+        </ion-label>
+      </ion-item>
+    </ion-list>
+  </ng-template>
+</ion-content>
+
+<ion-footer>
+  <ng-container [ngTemplateOutlet]="footerTemplateIdentifier"></ng-container>
+  <ng-template #lotFooter>
+    <ion-footer>
+      <ion-toolbar>
+        <ion-buttons>
+          <ion-button [disabled]="totalLotTypedQuantity !== maxTotalQuantity" (click)="onModalClose(sections)" expand="block" size="medium" shape="round" class="ion-text-center">
+            Submit
+          </ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-footer>
+  </ng-template>
+
+  <ng-template #serialFooter>
+    <ion-footer>
+      <ion-toolbar>
+        <ion-buttons>
+          <ion-button [disabled]="serialList.length!==this.receivedItemMsg[3]" (click)="onModalClose(serialList)"
+            expand="block" size="medium" shape="round" class="ion-text-center">
+            Submit
+          </ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-footer>
+  </ng-template>
+</ion-footer>

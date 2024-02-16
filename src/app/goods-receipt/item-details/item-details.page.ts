@@ -1,4 +1,6 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
+
+import { ModalController } from '@ionic/angular';
 import { NodeApiService } from 'src/app/providers/node-api.service';
 import { SqliteService } from 'src/app/providers/sqlite.service';
 import { AuthService } from 'src/app/login/auth.service';
@@ -8,7 +10,10 @@ import { Subscription } from 'rxjs';
 import { transactionTableName, docsForReceivingTableName } from 'src/app/CONSTANTS/CONSTANTS';
 import { ApiSettings } from 'src/app/CONSTANTS/api-settings';
 import { NetworkService } from 'src/app/providers/network.service';
-import { NavController } from '@ionic/angular';
+import { SharedService } from 'src/app/providers/shared.service';
+import { CommonSharedListPage } from 'src/app/common-shared-list-page/common-shared-list-page.page';
+
+import { formatDate } from '@angular/common';
 
 @Component({
   selector: 'app-item-details',
@@ -19,7 +24,7 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
 
   item!: any
   private activatedSubscription!: Subscription;
-  QtyReceiving: string = '';
+  QtyReceiving: any = "";
   subInvName: string = '';
   locator: string = '';
   lot: string = '';
@@ -34,14 +39,26 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
   apiResponse: any;
   hasNetwork: boolean = false;
   docsForReceivingSubscription!: Subscription;
+  itemData: any[] = [];
+  uomCode: string = '';
+  subInvCode: string = '';
+  locaCode: string = '';
+  itemRevCode: any;
+  qtyRecieved: number = 0;
+  qtyRemaining: number = 0;
+  SerialData: any[] = [];
+  convertedLotData: any;
+  lotData: any[] = [];
+
 
   constructor(
+    private sharedService: SharedService,
     private apiService: NodeApiService,
     private sqliteService: SqliteService,
     private uiProviderService: UiProviderService,
     private activatedRoute: ActivatedRoute,
     private networkService: NetworkService,
-    private navCtrl: NavController,
+    private modalController: ModalController,
     private authService: AuthService
   ) { 
     this.apiService.getValue('loginData').then((val) => {
@@ -64,7 +81,7 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
     this.networkSubscription = this.networkService.isNetworkAvailable().subscribe((networkStatus) => {
       this.hasNetwork = networkStatus
     })
-
+    this.loadItemsData();
   }
 
   async ionViewWillEnter() {
@@ -76,33 +93,73 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
     this.networkSubscription = this.networkService.isNetworkAvailable().subscribe((networkStatus) => {
       this.hasNetwork = networkStatus
     })
+    alert(this.generateParams());
   }
 
-  async insertTransaction(response: any) {
-    let query = `INSERT INTO ${transactionTableName} (PoNumber, quantityReceived, receiptNumber, message, status, shipLaneNum, VendorId, UOM, PoHeaderId, PoLineLocationId, PoLineId, PoDistributionId, DestinationType,ItemNumber)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-    let payload = [
-      this.item.PoNumber,
-      this.QtyReceiving, 
-      response[0].ReceiptNumber, 
-      response[0].Message, 
-      response[0].RecordStatus, 
-      this.item.PoShipmentNumber, 
-      this.item.VendorId, 
-      this.item.ItemUom, 
-      this.item.PoHeaderId, 
-      this.item.PoLineLocationId, 
-      this.item.PoLineId, 
-      this.item.PoDistributionId, 
-      this.item.DestinationType, 
-      this.item.ItemNumber
-    ]
-    try{
-      await this.sqliteService.executeCustonQuery(query, payload)
-      this.uiProviderService.presentToast('Success', 'Transaction saved to database');
-    } catch (error) {
-      console.log("error while inserting transaction: ",error)
-      this.uiProviderService.presentToast('error', 'Transaction not saved to database', 'danger');
+  // async insertTransaction(response: any) {
+  //   let query = `INSERT INTO ${transactionTableName} (PoNumber, quantityReceived, receiptNumber, message, status, shipLaneNum, VendorId, UOM, PoHeaderId, PoLineLocationId, PoLineId, PoDistributionId, DestinationType,ItemNumber)
+  //   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+  //   let payload = [
+  //     this.item.PoNumber,
+  //     this.QtyReceiving, 
+  //     response[0].ReceiptNumber, 
+  //     response[0].Message, 
+  //     response[0].RecordStatus, 
+  //     this.item.PoShipmentNumber, 
+  //     this.item.VendorId, 
+  //     this.item.ItemUom, 
+  //     this.item.PoHeaderId, 
+  //     this.item.PoLineLocationId, 
+  //     this.item.PoLineId, 
+  //     this.item.PoDistributionId, 
+  //     this.item.DestinationType, 
+  //     this.item.ItemNumber
+  //   ]
+  //   try{
+  //     await this.sqliteService.executeCustonQuery(query, payload)
+  //     this.uiProviderService.presentToast('Success', 'Transaction saved to database');
+  //   } catch (error) {
+  //     console.log("error while inserting transaction: ",error)
+  //     this.uiProviderService.presentToast('error', 'Transaction not saved to database', 'danger');
+  //   }
+  // }
+
+  UpdateQty() {
+    if (this.QtyReceiving <= 0) {
+      this.uiProviderService.presentToast('Error', 'Receipt Quantity can not be zero or empty', "danger");
+      throw new Error;
+    }
+    else {
+      if (this.item.DestinationType == "Inventory") {
+        if (this.subInvCode == "" || this.subInvCode == null) {
+          this.uiProviderService.presentToast('Error', 'Please select Sub Inventory Code', "danger");
+          throw new Error;
+        }
+        else if (this.locaCode == "" || this.locaCode == null) {
+          this.uiProviderService.presentToast('Error', 'Please select Locator Code', "danger");
+          throw new Error;
+        }
+      }
+
+      if (this.item.IsSerialControlled == "True") {
+        if (this.SerialData.length == 0) {
+          this.uiProviderService.presentToast('Error', 'Please select Serial Number', 'danger');
+          throw new Error;
+        }
+      }
+      else if (this.item.IsLotControlled == "True") {
+        if (this.lotData.length == 0) {
+          this.uiProviderService.presentToast('Error','Please select Lot Number', 'danger');
+          throw new Error;
+        }
+      }
+    }
+
+
+    if (this.QtyReceiving <= this.item.QtyRemaining) {
+      this.postTransaction();
+    } else {
+      this.uiProviderService.presentToast('Error', 'QTY Tolerance is Exceeding', 'danger');
     }
   }
 
@@ -113,20 +170,26 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
     }
     const transPayload = this.apiService.generatePayloadBody(this.item, this.selectedOrg, this.userDetails, this.QtyReceiving,1);
     const payload = this.generateFullPayload([transPayload]);
+    const generatedPayload = this.generateGoodsRecpPayload(this.item);
     this.uiProviderService.presentLoading('waiting for response...');
         if (this.hasNetwork) {
-          this.postitemSubscription = this.apiService.performPost(ApiSettings.createGoodsReceiptUrl, payload).subscribe({next: async (resp: any) => {
+          this.postitemSubscription = this.apiService.performPost(ApiSettings.createGoodsReceiptUrl, generatedPayload).subscribe({next: async (resp: any) => {
               const response = resp['Response']
-              await this.insertTransaction(response);
+              const transactionPayload = this.transactionObject();
               if (response[0].RecordStatus === 'S') {
+                transactionPayload.status = response[0].RecordStatus;
+                transactionPayload.receiptInfo = response[0].ReceiptNumber;
+                
                 this.uiProviderService.presentToast('Success', 'Goods receipt created successfully');
                 this.item.QtyRemaining = this.item.QtyRemaining - parseInt(this.QtyReceiving);
                 this.item.QtyReceived = this.item.QtyReceived + parseInt(this.QtyReceiving);
-              }
-              else {
+              } else {
+                transactionPayload.status = response[0].RecordStatus;
+                transactionPayload.error = response[0].Message;
                 this.uiProviderService.presentToast('Error', response[0].Message, 'danger');
               }
-              await this.getDocsForReceiving();
+              await this.sharedService.insertTransaction(transactionPayload, transactionTableName);
+              await this.getDocsForReceivingPost();
             },
             error: (error) => {
               console.log("error while performing post transaction: ",error)
@@ -136,19 +199,61 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
             }
           })
         } else {
-          const responseStructure = [{
-            ReceiptNumber:'', 
-            TransactionId: '', 
-            Message: 'Network not available', 
-            RecordStatus: 'local'
-          }]
-          await this.insertTransaction(responseStructure);
+          // const responseStructure = [{
+          //   ReceiptNumber:'', 
+          //   TransactionId: '', 
+          //   Message: 'Network not available', 
+          //   RecordStatus: 'local'
+          // }]
+          const offlinePayload = this.transactionObject();
+
+          await this.sharedService.insertTransaction(offlinePayload, transactionTableName);
           this.uiProviderService.presentToast('Success', 'Goods receipt saved offline');
           this.item.QtyRemaining = this.item.QtyRemaining - parseInt(this.QtyReceiving);
           this.item.QtyReceived = this.item.QtyReceived + parseInt(this.QtyReceiving);
           this.uiProviderService.dismissLoading();
         }
       
+  }
+
+  transactionObject() {
+    const offlinePayload = {
+      poNumber: this.item.PoNumber,
+      titleName: 'Goods Receipt',
+      syncStatus: new Date(),
+      createdTime: new Date(),
+      quantityReceived: this.QtyReceiving,
+      receiptInfo: 'N/A',
+      error: '',
+      status: 'local',
+      shipLaneNum: this.item.PoShipmentNumber,
+      vendorId: this.item.VendorId,
+      unitOfMeasure: this.item.ItemUom,
+      poHeaderId: this.item.PoHeaderId,
+      poLineLocationId: this.item.PoLineLocationId,
+      poLineId: this.item.PoLineId,
+      poDistributionId: this.item.PoDistributionId,
+      destinationTypeCode: this.item.DestinationType,
+      itemNumber: this.item.ItemNumber,
+      Subinventory: this.subInvCode,
+      Locator: this.locaCode,
+      ShipmentNumber: "",
+      LpnNumber: "",
+      OrderLineId: "",
+      SoldtoLegalEntity: "",
+      SecondaryUnitOfMeasure: "",
+      ShipmentHeaderId: "",
+      ItemRevision: this.itemRevCode,
+      ReceiptSourceCode: "",
+      MobileTransactionId: "",
+      TransactionType: "RECEIVE",
+      AutoTransactCode: "DELIVER",
+      OrganizationCode: "",
+      serialNumbers: this.SerialData.length > 0 ? this.SerialData.join(',') : " ",
+      lotQuantity: this.lotData.length > 0 ? this.convertedLotData.map((section: any) => section.TransactionQuantity).join(',') : " ",
+      lotCode: this.lotData.length > 0 ? this.convertedLotData.map((section: any) => section.LotNumber).join(',') : " ",
+    };
+    return offlinePayload;
   }
 
   generateFullPayload(payloads: any[]) {
@@ -160,13 +265,14 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
     return payloadObj
   }
 
-  async getDocsForReceiving() {
-    const params = await this.generateParams();
+  async getDocsForReceivingPost() {
+    const params = this.generateParams();
+    alert(JSON.stringify(params));
     // const params = `${this.selectedOrg.InventoryOrgId_PK}/""/""`;
     this.docsForReceivingSubscription = this.apiService.fetchAllByUrl(ApiSettings.Docs4ReceivingUrl + params).subscribe({
       next: async (resp: any) => {
         if (resp) {
-          
+          alert(JSON.stringify(resp))
           const columns = Object.keys(resp.Docs4Receiving[0])
           try {
             await resp.Docs4Receiving.forEach(async (element: any) => {
@@ -174,13 +280,19 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
                 await this.sqliteService.executeCustonQuery(`DELETE FROM ${docsForReceivingTableName} WHERE OrderLineId=? AND PoLineLocationId=? AND ShipmentLineId=?`, [element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);
               } else {
                 await this.sqliteService.insertData(`INSERT OR REPLACE INTO ${docsForReceivingTableName} (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`, Object.values(element));
-              }
+                const updateQuery = `
+                  UPDATE ${docsForReceivingTableName} 
+                  SET QtyOrdered = ?, QtyReceived = ?, QtyRemaining = ?
+                  WHERE OrderLineId = ?
+                  AND PoLineLocationId = ?
+                  AND ShipmentLineId = ?;`;
+
+              await this.sqliteService.executeCustonQuery(updateQuery, [element['QtyOrdered'], element['QtyReceived'], element['QtyRemaining'], element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);              }
             })
           } catch (error) {
             console.log('error in performDeltaSync: ', error);
           }
         } else {
-          alert(JSON.stringify(resp))
           console.log('error in performDeltaSync: ', resp);
         }
         }, error: (err) => {
@@ -189,19 +301,198 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
       })
   }
 
-  async generateParams() {
-    const orgId = await this.apiService.getValue('orgId')
+  generateParams() {
+    const orgId = this.selectedOrg.InventoryOrgId_PK
+    
     // const formattedDate = formatDate(new Date(), "dd-MM-yyyy HH:mm:ss", "en-US")
     const formattedDate = this.authService.lastLoginDate
+  
     return `${orgId}/"${formattedDate}"/"N"`
    }
 
-  fetchSubInv(inv: any) {
-    alert(JSON.stringify(inv))
+   async loadItemsData() {
+    try {
+      this.itemData = [this.item];
+      this.uomCode = this.itemData[0].ItemUom;
+      this.subInvCode = this.itemData[0].DefaultSubInventoryCode;
+      this.locaCode = this.itemData[0].DefaultLocator;
+      this.itemRevCode = this.itemData[0].ItemRevision;
+      this.qtyRecieved = this.itemData[0].QtyOrdered -
+      this.itemData[0].QtyRemaining;
+      this.qtyRemaining = this.itemData[0].QtyRemaining;
+    } catch {
+      console.log('Error loading data');
+    }
+  }
+   async goToCommonListPage(message: string) {
+    let modalData: any[] = [message, this.subInvCode, this.item, this.QtyReceiving, this.SerialData, this.convertedLotData];
+
+    if ((message == 'SERIAL-CONTROLLED' || message == 'LOT-CONTROLLED') && this.QtyReceiving <= 0) {
+      this.uiProviderService.presentToast('Error', 'Please enter quantity first', 'danger');
+      return;
+    }
+
+    const modal = await this.modalController.create({
+      component: CommonSharedListPage,
+      componentProps: { data: modalData },
+    });
+
+    modal.onDidDismiss().then((dataReturned: any) => {
+      if (dataReturned.data) {
+        let val = dataReturned.data;
+        switch (message) {
+          case 'UOM':
+            this.uomCode = val.data;
+            break;
+          case 'SUB-INV':
+            this.subInvCode = val.data;
+            break;
+          case 'LOCATOR':
+            this.locaCode = val.data;
+            break;
+          case 'LOT-CONTROLLED':
+            this.lotData = val.data;
+            if (this.lotData.length > 0) {
+              this.buildLotData();
+            }
+            break;
+          case 'SERIAL-CONTROLLED':
+            this.SerialData = val.data;
+            break;
+          case 'REV':
+            this.itemRevCode = val.data;
+            break;
+        }
+      }
+    });
+
+    await modal.present();
+  }
+ 
+  buildLotData() {
+    this.convertedLotData = [];
+    if (this.lotData) {
+      for (const section of this.lotData) {
+        const lotQuantity = section.get('lotQuantity').value;
+        const lotCode = section.get('lotCode').value;
+        const convertedObject = {
+          GradeCode: '',
+          LotExpirationDate: '',
+          LotNumber: lotCode,
+          ParentLotNumber: '',
+          SecondaryTransactionQuantity: '',
+          TransactionQuantity: lotQuantity,
+        };
+        this.convertedLotData.push(convertedObject);
+      }
+    }
+
+    return this.convertedLotData;
+
   }
 
-  async fetchSubLoc() {
+  generateGoodsRecpPayload(item: any) {
+    const requestBody: any = {
+      Input: {
+        parts: [
+          {
+            id: 'part1',
+            path: '/receivingReceiptRequests',
+            operation: 'create',
+            payload: {
+              ReceiptSourceCode: item.ReceiptSourceCode,
+              OrganizationCode: item.OrganizationCode,
+              EmployeeId: this.userDetails.PERSON_ID,
+              BusinessUnitId: this.selectedOrg.BusinessUnitId,
+              ReceiptNumber: '',
+              BillOfLading: item.BillOfLading,
+              FreightCarrierName: item.FreightCarrierName,
+              PackingSlip: item.Packingslip,
+              WaybillAirbillNumber: item.WayBillAirBillNumber,
+              ShipmentNumber: item.ShipmentNumber,
+              ShippedDate: '',
+              VendorSiteId: item.VendorSiteId,
+              VendorId: item.VendorId,
+              attachments: [],
+              CustomerId: item.CustomerId,
+              InventoryOrgId: this.selectedOrg.InventoryOrgId_PK,
+              DeliveryDate: '31-Jan-2024 12:00:00',
+              ResponsibilityId: '20634',
+              UserId: this.userDetails.USER_ID,
+              DummyReceiptNumber: new Date().getTime(),
+              BusinessUnit: 'Vision Operations',
+              InsertAndProcessFlag: 'true',
+              lines: [
+                {
+                  ReceiptSourceCode: item.ReceiptSourceCode,
+                  MobileTransactionId: new Date().getTime(),
+                  TransactionType: 'RECEIVE',
+                  AutoTransactCode: 'DELIVER',
+                  OrganizationCode: item.OrganizationCode,
+                  DocumentNumber: item.PONumber,
+                  DocumentLineNumber: item.PoShipmentNumber,
+                  ItemNumber: item.ItemNumber,
+                  TransactionDate: formatDate(new Date(), 'dd-MMM-yyyy HH:mm:ss', 'en-US'),
+                  Quantity: this.QtyReceiving,
+                  UnitOfMeasure: this.uomCode,
+                  SoldtoLegalEntity: item.SoldtoLegalEntity,
+                  SecondaryUnitOfMeasure: '',
+                  ShipmentHeaderId: item.ShipmentHeaderId,
+                  ItemRevision: this.itemRevCode,
+                  POHeaderId: item.POHeaderId,
+                  POLineLocationId: item.POLineLocationId,
+                  POLineId: item.POLineId,
+                  PODistributionId: item.PODistributionId,
+                  ReasonName: item.ReasonName,
+                  Comments: item.Comments,
+                  ShipmentLineId: item.ShipmentLineId,
+                  transactionAttachments: [],
+                  lotItemLots: this.convertedLotData,
+                  serialItemSerials: this.SerialData.map((serial: any) => ({
+                    FromSerialNumber: serial,
+                    ToSerialNumber: serial
+                  })),
+                  lotSerialItemLots: [],
+                  ExternalSystemTransactionReference: 'Mobile Transaction',
+                  ReceiptAdviceHeaderId: item.ReceiptAdviceHeaderId,
+                  ReceiptAdviceLineId: item.ReceiptAdviceLineId,
+                  TransferOrderHeaderId: item.TransferOrderHeaderId,
+                  TransferOrderLineId: item.TransferOrderLineId,
+                  PoLineLocationId: item.PoLineLocationId,
+                  DestinationTypeCode: item.DestinationType,
+                  Subinventory: this.subInvCode,
+                  Locator: this.locaCode,
+                  ShipmentNumber: item.ShipmentNumber,
+                  LpnNumber: item.LpnNumber,
+                  OrderLineId: item.OrderLineId,
+                },
+              ],
+            },
+          },
+        ],
+      },
+    };
+    return requestBody;
+  }
+  onSubInvEdit() {
+    this.subInvCode = "";
+    this.locaCode = "";
+  }
+  onLocatorEdit() {
+    this.locaCode = ""
+  }
 
+  onQuantityChange(newQuantity: number) {
+    this.QtyReceiving = newQuantity;
+  }
+
+  onSubInvChange(subInv: any) {
+    this.subInvCode = subInv;
+  }
+
+
+  onLocatorChange(locator: any) {
+    this.locaCode = locator;
   }
 
   ngOnDestroy() {

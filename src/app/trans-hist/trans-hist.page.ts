@@ -95,29 +95,34 @@ export class TransHistPage implements OnInit {
 
   async syncAllAtOnce() {
  
-      const transactions = this.offlineItemsToSync.map((transaction: any, index:any) => 
-        this.apiService.generatePayloadBody(transaction, this.selectedOrg, this.userDetails, transaction.quantityReceived, index)
-      );
+      // const transactions = this.offlineItemsToSync.map((transaction: any, index:any) => 
+      //   this.apiService.generatePayloadBody(transaction, this.selectedOrg, this.userDetails, transaction.quantityReceived, index)
+      // );
       
-      const batchPayload = this.generateFullPayload(transactions);
-      this.uiProviderService.presentLoading('performing sync...');
+      // const batchPayload = this.generateFullPayload(transactions);
+      // this.uiProviderService.presentLoading('performing sync...');
+      const batchPayload = this.generatePayloadsAll();
+      if (batchPayload === null) {
+        this.uiProviderService.presentToast('Success', 'No data to sync', 'success');
+        return
+      }
       this.postSubscription = this.apiService.performPostWithHeaders(ApiSettings.createGoodsReceiptUrl, batchPayload, this.getHeaders()).subscribe({
         next: async (resp: any) => {
           console.log(resp);
           const response = resp['Response']
           this.offlineItemsToSync.forEach(async (transaction: any) => {
-            const matchedTransaction = response.find((res: any) => res.PoLineLocationId === transaction.PoLineLocationId)
+            const matchedTransaction = response.find((res: any) => res.PoLineLocationId === transaction.poLineLocationId)
             console.log(matchedTransaction)
             if (matchedTransaction && matchedTransaction.RecordStatus === 'S') {
-              this.uiProviderService.presentToast('Success', `Success# ${matchedTransaction.ReceiptNumber}`, `post performed on ${transaction.PoNumber} ${transaction.ItemNumber} with ${transaction.quantityReceived}`);
+              this.uiProviderService.presentToast('Success', `Success# ${matchedTransaction.ReceiptNumber}`, `post performed on ${transaction.poNumber} ${transaction.itemNumber} with ${transaction.quantityReceived}`);
               console.log(matchedTransaction)
               await this.updateTransaction(response, transaction.id);
             }else if (matchedTransaction && matchedTransaction.RecordStatus === 'E') {
-              this.uiProviderService.presentToast('Error', matchedTransaction.Message + " for " + transaction.PoNumber + " " + transaction.ItemNumber, 'danger');
+              this.uiProviderService.presentToast('Error', matchedTransaction.Message + " for " + transaction.poNumber + " " + transaction.itemNumber, 'danger');
               console.log(matchedTransaction)
               await this.updateTransaction(response, transaction.id);
             } else {
-              this.uiProviderService.presentToast('Error', 'post failed for ' + transaction.PoNumber + " " + transaction.ItemNumber, 'tertiary');
+              this.uiProviderService.presentToast('Error', 'post failed for ' + transaction.poNumber + " " + transaction.itemNumber, 'tertiary');
             }
           })
           await this.performDeltaSync();
@@ -131,9 +136,140 @@ export class TransHistPage implements OnInit {
       })
   }
 
+  async generatePayloadsAll() {
+    try {
+      const transactions = await this.sqliteService.getDataFromTable(transactionTableName);
+      const successTransactions = transactions.filter(
+        (transaction: any) => transaction.status === 'Local'
+      );
+      if (successTransactions.length > 0) {
+        const payloads = successTransactions.map((transaction: any, index: any) =>
+          this.buildPayloadFromTransaction(transaction, index)
+        );
+        return this.combinePayloads(payloads);
+      }
+      else {
+        this.uiProviderService.presentToast('Success','No pending transactions left', 'warning')
+        return null
+      }
+    } catch (error) {
+      console.error('Error fetching or processing transactions:', error);
+    }
+  }
+
+  buildPayloadFromTransaction(payload: any, index: any) {
+    const requestBody = {
+      id: `part${index + 1}`,
+      path: '/receivingReceiptRequests',
+      operation: 'create',
+      payload: {
+        ReceiptSourceCode: payload?.ReceiptSourceCode,
+        OrganizationCode: payload?.OrganizationCode,
+        EmployeeId: this.userDetails.PERSON_ID,
+        BusinessUnitId: this.selectedOrg?.BusinessUnitId,
+        ReceiptNumber: payload?.receiptInfo,
+        BillOfLading: '',
+        FreightCarrierName: '',
+        PackingSlip: '',
+        WaybillAirbillNumber: '',
+        ShipmentNumber: '',
+        ShippedDate: '',
+        VendorSiteId: '',
+        VendorId: parseInt(payload?.vendorId),
+        attachments: [],
+        CustomerId: '',
+        InventoryOrgId: this.selectedOrg?.InventoryOrgId_PK,
+        DeliveryDate: '31-Jan-2024 12:00:00',
+        ResponsibilityId: '20634',
+        UserId: localStorage.getItem('USER_ID'),
+        DummyReceiptNumber: new Date().getTime(),
+        BusinessUnit: 'Vision Operations',
+        InsertAndProcessFlag: 'true',
+        lines: [
+          {
+            ReceiptSourceCode: payload?.ReceiptSourceCode,
+            MobileTransactionId: new Date().getTime(),
+            TransactionType: payload?.TransactionType,
+            AutoTransactCode: payload.AutoTransactCode,
+            OrganizationCode: payload?.OrganizationCode,
+            DocumentNumber: payload?.poNumber,
+            DocumentLineNumber: payload?.shipLaneNum,
+            ItemNumber: payload?.itemNumber,
+            TransactionDate: formatDate(new Date(), "dd-MM-yyyy HH:mm:ss", "en-US"),
+            Quantity: payload?.quantityReceived,
+            UnitOfMeasure: payload?.unitOfMeasure,
+            SoldtoLegalEntity: payload?.SoldtoLegalEntity,
+            SecondaryUnitOfMeasure: payload?.SecondaryUnitOfMeasure,
+            ShipmentHeaderId: payload?.ShipmentHeaderId,
+            ItemRevision: payload?.ItemRevision != null ? payload?.ItemRevision : "",
+            POHeaderId: parseInt(payload?.poHeaderId),
+            POLineLocationId: parseInt(payload?.poLineLocationId),
+            POLineId: parseInt(payload?.poLineId),
+            PODistributionId: parseInt(payload?.poDistributionId),
+            ReasonName: '',
+            Comments: '',
+            ShipmentLineId: '',
+            transactionAttachments: [],
+            lotItemLots: (payload?.lotQuantity && payload?.lotQuantity.trim() !== "")
+              ? this.buildLotPayload(payload?.lotQuantity, payload?.lotCode)
+              : [],
+            serialItemSerials: (payload?.serialNumbers && payload?.serialNumbers.trim() !== "")
+              ? payload?.serialNumbers.split(',').map((serial: any) => ({
+                fromSerial: serial ? serial : "",
+                toSerial: serial ? serial : ""
+              }))
+              : [],
+            lotSerialItemLots: [],
+            ExternalSystemTransactionReference: 'Mobile Transaction',
+            ReceiptAdviceHeaderId: '',
+            ReceiptAdviceLineId: '',
+            TransferOrderHeaderId: '',
+            TransferOrderLineId: '',
+            PoLineLocationId: payload?.poLineLocationId,
+            DestinationTypeCode: payload?.destinationTypeCode,
+            Subinventory: payload?.Subinventory,
+            Locator: payload?.Locator,
+            ShipmentNumber: payload?.ShipmentNumber,
+            LpnNumber: payload?.LpnNumber,
+            OrderLineId: payload?.OrderLineId,
+          },
+        ],
+      },
+    };
+    return requestBody;
+  }
+
+  buildLotPayload(lotQuant: any, lotCodes: any) {
+    if (lotQuant != "" || lotQuant != null || lotCodes != "" || lotCodes != null) {
+      const lotNumbers = lotCodes.split(',');
+      const lotQuantities = lotQuant.split(',');
+      const resultArray = lotNumbers.map((lotNumber: any, index: any) => ({
+        GradeCode: '',
+        LotExpirationDate: formatDate(new Date(), "dd-MM-yyyy HH:mm:ss", "en-US"),
+        LotNumber: lotNumber ? lotNumber : "",
+        ParentLotNumber: '',
+        SecondaryTransactionQuantity: '',
+        TransactionQuantity: lotQuantities[index] ? lotQuantities[index] : "",
+      }));
+      return resultArray;
+    }
+    return [];
+
+  }
+
+  combinePayloads(payloads: any[]) {
+    const requestBody: any = {
+      Input: {
+        parts: payloads,
+      },
+    };
+
+    return requestBody;
+  }
+
   async updateTransaction(response: any, id: any) {
     let query = `UPDATE ${transactionTableName}
-    SET receiptNumber=?, message=?, status=?
+    SET receiptInfo=?, error=?, status=?
     WHERE id = ?;`;
     let payload = [
       response[0].ReceiptNumber, 
@@ -182,7 +318,7 @@ export class TransHistPage implements OnInit {
       }
   }
   async performDeltaSync() {
-    const params = await this.generateParams();
+    const params = this.generateParams();
     // const params = `${this.selectedOrg.InventoryOrgId_PK}/""/""`;
     this.docsForReceivingSubscription = this.apiService.fetchAllByUrl(ApiSettings.Docs4ReceivingUrl + params).subscribe({
       next: async (resp: any) => {
@@ -193,6 +329,14 @@ export class TransHistPage implements OnInit {
                 await this.sqliteService.executeCustonQuery(`DELETE FROM ${docsForReceivingTableName} WHERE OrderLineId=? AND PoLineLocationId=? AND ShipmentLineId=?`, [element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);
               } else {
                 await this.sqliteService.insertData(`INSERT OR REPLACE INTO ${docsForReceivingTableName} (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`, Object.values(element));
+                const updateQuery = `
+                  UPDATE ${docsForReceivingTableName} 
+                  SET QtyOrdered = ?, QtyReceived = ?, QtyRemaining = ?
+                  WHERE OrderLineId = ?
+                  AND PoLineLocationId = ?
+                  AND ShipmentLineId = ?;`;
+
+              await this.sqliteService.executeCustonQuery(updateQuery, [element['QtyOrdered'], element['QtyReceived'], element['QtyRemaining'], element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]); 
               }
             })
           } catch (error) {
@@ -205,9 +349,9 @@ export class TransHistPage implements OnInit {
       })
   }
 
-  async generateParams() {
-    const orgId = await this.apiService.getValue('orgId')
-    const formattedDate = formatDate(new Date(), "dd-MM-yyyy HH:mm:ss", "en-US")
+  generateParams() {
+    const orgId = this.selectedOrg.InventoryOrgId_PK
+    const formattedDate = formatDate(new Date(), "dd-MMM-yyyy HH:mm:ss", "en-US")
     return `${orgId}/"${formattedDate}"/"N"`
    }
 }

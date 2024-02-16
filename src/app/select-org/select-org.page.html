@@ -13,6 +13,9 @@
 </ion-header>
 
 <ion-content [fullscreen]="true">
+  <ion-refresher slot="fixed" (ionRefresh)="onPullRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
   <ion-toolbar>
       <ion-card *ngFor="let organisation of organisations" (click)="onSelect(organisation)">
         <ion-buttons>

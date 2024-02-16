@@ -16,6 +16,7 @@ export class AuthService {
   isFirstTimeLogin: boolean = true;
   lastLoginDate: string = '';
 
+
   constructor(
     private uiProviderService: UiProviderService,
     private apiService: NodeApiService,
@@ -129,7 +130,7 @@ export class AuthService {
           if (this.isLoggedIn) {
               const login_data = this.apiService.getValue('loginData')
               this.saveLoginData([data.username, data.password]);
-              this.lastLoginDate = formatDate(new Date(), "dd-MM-yyyy HH:mm:ss", "en-US")
+              this.lastLoginDate = formatDate(new Date(), "dd-MMM-yyyy HH:mm:ss", "en-US")
               this.uiProviderService.presentToast('Success', 'Login Successful', 'success');
               this.navCtrl.navigateForward('/select-org', {queryParams: {data: login_data}});
           } else {

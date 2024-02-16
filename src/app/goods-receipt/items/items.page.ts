@@ -41,8 +41,8 @@ export class ItemsPage implements OnInit, OnDestroy {
     const query = `SELECT * FROM ${docsForReceivingTableName} 
                     WHERE SourceTypeCode='PO' 
                     And 
-                    PoNumber = '${this.doc.PO_NUMBER}'
-                    GROUP BY ItemNumber`;
+                    PoNumber = '${this.doc.PoNumber}'
+                    `;
     try {
       const data = await this.sqliteService.executeCustonQuery(query)
       if (data.rows.length > 0) {
@@ -59,8 +59,8 @@ export class ItemsPage implements OnInit, OnDestroy {
    
   }
 
-  onSearch() {
-    this.Orders = this.Orders.filter((order) => {
+  onSearch(event: any) {
+    this.Orders = this.docsForReceiving.filter((order) => {
       return (order.ItemNumber.toLowerCase().indexOf(this.searchText.toLowerCase()) > -1);
     })
   }

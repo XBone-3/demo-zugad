@@ -16,10 +16,10 @@
     <ion-card-content>
       <ion-list>
         <ion-item>
-          <p>Order: {{ item.QtyOrdered }} {{ item.ItemUom }}</p>
+          <p>Qty Order: {{ item.QtyOrdered }} {{ item.ItemUom }}</p>
         </ion-item>
         <ion-item>
-          <p>Quantity Remaining: {{ item.QtyRemaining }} {{ item.ItemUom }}</p>
+          <p>Qty Remaining: {{ item.QtyRemaining }} {{ item.ItemUom }}</p>
         </ion-item>
         <ion-item>
           <p>Quantity Received: {{ item.QtyOrdered - item.QtyRemaining }} {{ item.ItemUom }}</p>
@@ -27,94 +27,35 @@
         <ion-item>
           <p>Shipment #{{ item.PoShipmentNumber }}</p>
         </ion-item>
-        <!-- <ion-item *ngIf="item.DestinationType === 'Inventory'">
-          <ion-grid>
-            <ion-row>
-             <ion-col size="4">
-               <ion-label>select subinv: </ion-label>
-             </ion-col>
-             <ion-col size="6" fill="solid">
-               <ion-item fill="outline">
-               <ion-input type="text" placeholder="Select SubInv" [value]="subInvName"></ion-input>
-               </ion-item>
-             </ion-col>
-             <ion-col size="2">
-              <ion-toolbar>
-                <ion-buttons>
-                  <ion-button slot="end" (click)="fetchSubInv()">
-                    <ion-icon name="chevron-forward-outline" slot="icon-only"></ion-icon>
-                  </ion-button>
-                </ion-buttons>
-              </ion-toolbar>
-             </ion-col>
-            </ion-row>
-           </ion-grid>
-        </ion-item> -->
-        <app-sub-inventory *ngIf="item.DestinationType === 'Inventory'" [subInvName]="subInvName" (selectedInv)="fetchSubInv($event)"></app-sub-inventory>
-        <ion-item *ngIf="enableLot">
-          <ion-grid>
-            <ion-row>
-              <ion-toolbar>
-                <ion-buttons>
-             <ion-col size="4">
-               <ion-label>select Loc: </ion-label>
-             </ion-col>
-             <ion-col size="6" fill="solid">
-               <ion-item fill="outline">
-               <ion-input type="number" placeholder="Select Location" [value]="locator"></ion-input>
-               </ion-item>
-             </ion-col>
-             
-              
-                
-                  <ion-button slot="end" (click)="fetchSubLoc()">
-                    <ion-icon name="chevron-forward-outline" slot="icon-only"></ion-icon>
-                  </ion-button>
-                
-              
-            
-            </ion-buttons>
-            </ion-toolbar>
-            </ion-row>
-           </ion-grid>
-        </ion-item>
 
-        <ion-item *ngIf="item.IsLotControlled==='True'">
-          <ion-grid>
-            <ion-row>
-              <ion-toolbar>
-                <ion-buttons>
-             <ion-col size="4">
-               <ion-label>Lot: </ion-label>
-             </ion-col>
-             <ion-col size="6" fill="solid" class="ion-text-center">
-               <ion-item fill="outline">
-               <ion-input readonly="true" [value]="lot"></ion-input>
-               </ion-item>
-             </ion-col>
-             
-              
-                
-                  <ion-button slot="end" (click)="fetchSubLoc()">
-                    <ion-icon name="chevron-forward-outline" slot="icon-only"></ion-icon>
-                  </ion-button>
-                
-              
-            
-            </ion-buttons>
-            </ion-toolbar>
-            </ion-row>
-           </ion-grid>
-        </ion-item>
-        
-        <ion-item>
+        <app-uom [uomCode]="uomCode" (openUom)="goToCommonListPage('UOM')"
+        (quantityChange)="onQuantityChange($event)"></app-uom>
+
+        <app-sub-inv *ngIf="item.DestinationType==='Inventory'" [subInv]="subInvCode"
+        (openSubInv)="goToCommonListPage('SUB-INV')" (clearSubInv)="onSubInvEdit()"
+        (subInvChange)="onSubInvChange($event)"></app-sub-inv>
+
+        <app-locator *ngIf="item.DestinationType==='Inventory'" [locator]="locaCode"
+        (openLocator)="goToCommonListPage('LOCATOR')" (clearLocator)="onLocatorEdit()"
+        (locatorChanged)="onLocatorChange($event)"></app-locator>
+
+        <app-lot *ngIf="item.IsLotControlled==='True'" [lotData]="lotData"
+        (openLot)="goToCommonListPage('LOT-CONTROLLED')"></app-lot>
+
+        <app-serial *ngIf="item.IsSerialControlled==='True'" [serialData]="SerialData"
+        (openSerial)="goToCommonListPage('SERIAL-CONTROLLED')"></app-serial>
+
+        <app-item-revision *ngIf="item?.IsRevisionControlled==='True'"
+        [itemRevCode]="itemRevCode" (openRevision)="goToCommonListPage('REV')"></app-item-revision>
+
+        <!-- <ion-item>
             <ion-grid>
              <ion-row>
               <ion-col size="4">
                 <ion-label>Quantity Receiving: </ion-label>
               </ion-col>
               <ion-col size="4" fill="solid">
-                <!-- <ion-label position="floating"></ion-label> -->
+                <ion-label position="floating"></ion-label>
                 <ion-item fill="outline">
                   <ion-input placeholder="Enter Quantity Receiving" type="number" [value]="QtyReceiving"></ion-input>
                 </ion-item>
@@ -124,11 +65,18 @@
               </ion-col>
              </ion-row>
             </ion-grid>
-        </ion-item>
+        </ion-item> -->
       </ion-list>
     </ion-card-content>
   </ion-card>
 </ion-content>
-<ion-footer>
+<!-- <ion-footer>
   <ion-button expand="block" (click)="postTransaction()" [disabled]="QtyReceiving === '' && useravailable === true  ">Submit</ion-button>
+</ion-footer> -->
+<ion-footer>
+  <ion-toolbar>
+    <ion-button (click)="UpdateQty()" expand="block">
+      SUBMIT
+    </ion-button>
+  </ion-toolbar>
 </ion-footer>

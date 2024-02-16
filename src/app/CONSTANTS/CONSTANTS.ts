@@ -12,6 +12,8 @@ export const inventoryPeriodsTableName = "inventory_periods";
 export const purchasingPeriodsTableName = "purchasing_periods";
 export const lotsTableName = "lots";
 export const serialsTableName = "serials";
+export const uomTableName = "uom";
+export const revisionTableName = "revisions";
 
 
 export interface LocationInterface {

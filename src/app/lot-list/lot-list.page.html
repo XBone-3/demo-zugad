@@ -1,0 +1,30 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>Select Lot Number</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-header collapse="condense">
+    <ion-toolbar>
+      <ion-title size="large">Select Lot Number</ion-title>
+    </ion-toolbar>
+  </ion-header>
+
+
+    <ion-item>
+      <ion-searchbar placeholder="Search"></ion-searchbar>
+    </ion-item>
+    <ion-list>
+      <ion-item
+        *ngFor="let option of lotList"
+        (click)="onModalClose(option.ChildLot_PK)"
+      >
+        <ion-label>
+          <label for="org-{{option.ChildLot_PK}}"
+            >{{ option.ChildLot_PK }}</label
+          >
+        </ion-label>
+      </ion-item>
+    </ion-list>
+</ion-content>

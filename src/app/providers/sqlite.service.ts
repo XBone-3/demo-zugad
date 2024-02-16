@@ -2,7 +2,7 @@ import { Injectable } from '@angular/core';
 import { Platform } from '@ionic/angular';
 import { SQLite, SQLiteObject } from '@ionic-native/sqlite/ngx';
 import { Storage } from '@ionic/storage-angular';
-import { loginTableName, locationTableName, historyTableName, userDetailsTableName } from '../CONSTANTS/CONSTANTS';
+import { loginTableName, locationTableName, historyTableName, userDetailsTableName, docsForReceivingTableName, transactionTableName, lotsTableName, uomTableName, serialsTableName, locatorsTableName, revisionTableName, subInventoryTableName } from '../CONSTANTS/CONSTANTS';
 
 @Injectable({
   providedIn: 'root'
@@ -35,6 +35,10 @@ export class SqliteService {
   async insertData(query: string, data: any) {
     return this.db.executeSql(query, data)
   }
+
+  async insertBatchData(query: any, data: any[][]) {
+    return this.db.sqlBatch(data.map(row => [query, row]))
+  }
   
 
   async executeCustonQuery(query: string, data: any = []) {
@@ -54,9 +58,18 @@ export class SqliteService {
   }
 
   async dropAllTables() {
-    [loginTableName, locationTableName, historyTableName, userDetailsTableName].forEach(async (table) => {
-      await this.db.executeSql(`DROP TABLE ${table}`, []);
-    })
+    // [loginTableName, locationTableName, historyTableName, userDetailsTableName].forEach(async (table) => {
+    //   await this.db.executeSql(`DROP TABLE ${table}`, []);
+    // })
+    const tablesToDrop = [docsForReceivingTableName, transactionTableName, lotsTableName, uomTableName, serialsTableName, locatorsTableName, revisionTableName, subInventoryTableName];
+    const dropPromises = tablesToDrop.map((tableName) => {
+      const dropQuery = `DROP TABLE IF EXISTS ${tableName}`;
+      return this.db.executeSql(dropQuery, []).then(() => {
+        console.log(`Table ${tableName} dropped`);
+      });
+    });
+
+    return Promise.all(dropPromises);
   }
 
   async dropDB() {

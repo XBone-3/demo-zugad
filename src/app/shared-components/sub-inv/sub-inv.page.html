@@ -1,0 +1,21 @@
+<ion-list>
+  <ion-row>
+    <ion-item>
+      <ion-col size="4">
+        <ion-label>SubInv:</ion-label>
+      </ion-col>
+      <ion-col size="4">
+        <ion-item>
+          <ion-input type="text" [(ngModel)]="subInv" (ngModelChange)="onSubInvChange()"
+            placeholder="Select SubInv"></ion-input>
+        </ion-item>
+      </ion-col>
+      <ion-col size="2">
+        <ion-icon *ngIf="subInv" (click)="onClearSubInv()" name="pencil"></ion-icon>
+      </ion-col>
+      <ion-col size="2">
+          <ion-icon name="chevron-forward-outline" (click)="onOpenSubInv()"></ion-icon>
+      </ion-col>
+    </ion-item>
+  </ion-row>
+</ion-list>

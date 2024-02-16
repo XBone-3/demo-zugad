@@ -2,7 +2,7 @@
   <ion-toolbar>
     <ion-buttons>
       <ion-back-button slot="start" defaultHref="/goods-receipt"></ion-back-button>
-      <ion-title>Order#{{ doc.PO_NUMBER }}</ion-title>
+      <ion-title>Order#{{ doc.PoNumber }}</ion-title>
     </ion-buttons>
   </ion-toolbar>
 </ion-header>
@@ -13,16 +13,16 @@
       <ion-grid>
         <ion-row>
           <ion-col size="6">
-            <ion-label>{{ doc.PO_TYPE }}</ion-label><br>  
-            <ion-label>{{ doc.VENDOR_NAME }}</ion-label>
+            <ion-label>{{ doc.PoType }}</ion-label><br>  
+            <ion-label>{{ doc.VendorName }}</ion-label>
           </ion-col>
           <ion-col size="6" class="ion-text-end">
-            <ion-label>items: {{ doc.TOTAL }}</ion-label>
+            <!-- <ion-label>items: {{ doc.TOTAL }}</ion-label> -->
           </ion-col>
         </ion-row>
         <ion-row>
           <ion-col>
-            <ion-label>{{ doc.REQUESTOR }}</ion-label>
+            <ion-label>{{ doc.Requestor }}</ion-label>
           </ion-col>
         </ion-row>
       </ion-grid>
@@ -35,8 +35,8 @@
       show-clear-button="always" 
       clear-icon="trash-bin" 
       [(ngModel)]="searchText" 
-      (ionInput)="onSearch()" 
-      (ionChange)="onSearch()"
+      (ionInput)="onSearch($event)" 
+      (ionChange)="onSearch($event)"
     ></ion-searchbar>
     <ion-item *ngFor="let order of Orders; let i = index">
       
