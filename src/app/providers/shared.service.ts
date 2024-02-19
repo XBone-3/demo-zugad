@@ -4,11 +4,13 @@ import { UiProviderService } from './ui-provider.service';
 import { transactionTableName } from '../CONSTANTS/CONSTANTS';
 import { formatDate } from '@angular/common';
 import { NodeApiService } from './node-api.service';
+import { Subscription } from 'rxjs';
 
 @Injectable({
   providedIn: 'root'
 })
 export class SharedService {
+  MetaDataSubscription!: Subscription;
 
   constructor(
     private sqliteService: SqliteService,
@@ -16,6 +18,39 @@ export class SharedService {
     private apiService: NodeApiService
   ) {
   }
+
+
+  // async fetchTableMetaData( api: string, tableName: string, ) {
+  //   let success = true
+  //   const params = 'metadata'
+  //   this.MetaDataSubscription = this.apiService.fetchAllByUrl(api + params).subscribe({
+  //     next: async (resp: any) => {
+  //       if (resp && resp.status === 200) {
+  //         try {
+  //           await this.createMetaDataTable(resp.body, tableName)
+           
+  //         } catch (error) {
+  //           console.error(error)
+            
+  //           // this.uiProviderService.presentToast('Error', 'failed to create serials table', 'danger');
+  //         }
+  //       } else if (resp && resp.status === 204) {
+  //         success = false
+  //       } 
+  //       else {
+  //         console.log('No metadata available');
+  //         this.uiProviderService.presentToast('Error', 'No metadata available for serials', 'danger');
+  //       }
+  //     },
+  //     error: (error) => {
+  //       console.error(error)
+  //       this.uiProviderService.presentToast('Error', 'failed to gettable metadata', 'danger');
+  //       success = false
+  //     }
+  //   })
+  //   return success
+  // }
+
 
   async createMetaDataTable(response: any, tableName: string) {
     let status;
@@ -71,17 +106,6 @@ export class SharedService {
       const valuesPlaceHolders = Array(columns.length).fill('?').join(', ')
       const insertQuery = `INSERT OR REPLACE INTO ${tableName} (${columns.join(', ')}) VALUES (${valuesPlaceHolders})`;
       await this.sqliteService.insertBatchData(insertQuery, data)
-      // const baseQuery = `INSERT OR REPLACE INTO ${tableName} (${columns.join(', ')}) VALUES {}`
-      // const chunkSize = 50;
-      // for (let i = 1; i < response.length; i += chunkSize) {
-      //   const chunk = response.slice(i, i + chunkSize);
-      //   const valuesPlaceHolders = Array(chunk.length).fill(`(${columns.map(() => '?').join(', ')})`)
-      //   const fullQuery = baseQuery.replace('{}', valuesPlaceHolders.join(', '))
-        
-      //   const flatData = chunk.flatMap((arr: any) => arr)
-        
-      //   await this.sqliteService.insertData(fullQuery, flatData)
-      // }
     } catch (error) {
       alert(`table insertion ${tableName} error: ${JSON.stringify(error)}`)
     }
@@ -170,17 +194,17 @@ export class SharedService {
     }
   }
 
-  buildPayloadFromTransaction(payload: any, index: any, selectedOrg: any, userDetails: any) {
+  buildPayloadFromTransaction(transactionItem: any, index: any, selectedOrg: any, userDetails: any) {
     const requestBody = {
       id: `part${index + 1}`,
       path: '/receivingReceiptRequests',
       operation: 'create',
       payload: {
-        ReceiptSourceCode: payload?.ReceiptSourceCode,
-        OrganizationCode: payload?.OrganizationCode,
+        ReceiptSourceCode: transactionItem?.ReceiptSourceCode,
+        OrganizationCode: transactionItem?.OrganizationCode,
         EmployeeId: userDetails.PERSON_ID,
         BusinessUnitId: selectedOrg?.BusinessUnitId,
-        ReceiptNumber: payload?.receiptInfo,
+        ReceiptNumber: transactionItem?.receiptInfo,
         BillOfLading: '',
         FreightCarrierName: '',
         PackingSlip: '',
@@ -188,46 +212,46 @@ export class SharedService {
         ShipmentNumber: '',
         ShippedDate: '',
         VendorSiteId: '',
-        VendorId: parseInt(payload?.vendorId),
+        VendorId: parseInt(transactionItem?.vendorId),
         attachments: [],
         CustomerId: '',
         InventoryOrgId: selectedOrg?.InventoryOrgId_PK,
         DeliveryDate: '31-Jan-2024 12:00:00',
         ResponsibilityId: '20634',
-        UserId: localStorage.getItem('USER_ID'),
+        UserId: userDetails.USER_ID,
         DummyReceiptNumber: new Date().getTime(),
         BusinessUnit: 'Vision Operations',
         InsertAndProcessFlag: 'true',
         lines: [
           {
-            ReceiptSourceCode: payload?.ReceiptSourceCode,
+            ReceiptSourceCode: transactionItem?.ReceiptSourceCode,
             MobileTransactionId: new Date().getTime(),
-            TransactionType: payload?.TransactionType,
-            AutoTransactCode: payload.AutoTransactCode,
-            OrganizationCode: payload?.OrganizationCode,
-            DocumentNumber: payload?.poNumber,
-            DocumentLineNumber: payload?.shipLaneNum,
-            ItemNumber: payload?.itemNumber,
+            TransactionType: transactionItem?.TransactionType,
+            AutoTransactCode: transactionItem.AutoTransactCode,
+            OrganizationCode: transactionItem?.OrganizationCode,
+            DocumentNumber: transactionItem?.poNumber,
+            DocumentLineNumber: transactionItem?.shipLaneNum,
+            ItemNumber: transactionItem?.itemNumber,
             TransactionDate: formatDate(new Date(), "dd-MM-yyyy HH:mm:ss", "en-US"),
-            Quantity: payload?.quantityReceived,
-            UnitOfMeasure: payload?.unitOfMeasure,
-            SoldtoLegalEntity: payload?.SoldtoLegalEntity,
-            SecondaryUnitOfMeasure: payload?.SecondaryUnitOfMeasure,
-            ShipmentHeaderId: payload?.ShipmentHeaderId,
-            ItemRevision: payload?.ItemRevision != null ? payload?.ItemRevision : "",
-            POHeaderId: parseInt(payload?.poHeaderId),
-            POLineLocationId: parseInt(payload?.poLineLocationId),
-            POLineId: parseInt(payload?.poLineId),
-            PODistributionId: parseInt(payload?.poDistributionId),
+            Quantity: transactionItem?.quantityReceived,
+            UnitOfMeasure: transactionItem?.unitOfMeasure,
+            SoldtoLegalEntity: transactionItem?.SoldtoLegalEntity,
+            SecondaryUnitOfMeasure: transactionItem?.SecondaryUnitOfMeasure,
+            ShipmentHeaderId: transactionItem?.ShipmentHeaderId,
+            ItemRevision: transactionItem?.ItemRevision != null ? transactionItem?.ItemRevision : "",
+            POHeaderId: parseInt(transactionItem?.poHeaderId),
+            POLineLocationId: parseInt(transactionItem?.poLineLocationId),
+            POLineId: parseInt(transactionItem?.poLineId),
+            PODistributionId: parseInt(transactionItem?.poDistributionId),
             ReasonName: '',
             Comments: '',
             ShipmentLineId: '',
             transactionAttachments: [],
-            lotItemLots: (payload?.lotQuantity && payload?.lotQuantity.trim() !== "")
-              ? this.buildLotPayload(payload?.lotQuantity, payload?.lotCode)
+            lotItemLots: (transactionItem?.lotQuantity && transactionItem?.lotQuantity.trim() !== "")
+              ? this.buildLotPayload(transactionItem?.lotQuantity, transactionItem?.lotCode)
               : [],
-            serialItemSerials: (payload?.serialNumbers && payload?.serialNumbers.trim() !== "")
-              ? payload?.serialNumbers.split(',').map((serial: any) => ({
+            serialItemSerials: (transactionItem?.serialNumbers && transactionItem?.serialNumbers.trim() !== "")
+              ? transactionItem?.serialNumbers.split(',').map((serial: any) => ({
                 fromSerial: serial ? serial : "",
                 toSerial: serial ? serial : ""
               }))
@@ -238,13 +262,13 @@ export class SharedService {
             ReceiptAdviceLineId: '',
             TransferOrderHeaderId: '',
             TransferOrderLineId: '',
-            PoLineLocationId: payload?.poLineLocationId,
-            DestinationTypeCode: payload?.destinationTypeCode,
-            Subinventory: payload?.Subinventory,
-            Locator: payload?.Locator,
-            ShipmentNumber: payload?.ShipmentNumber,
-            LpnNumber: payload?.LpnNumber,
-            OrderLineId: payload?.OrderLineId,
+            PoLineLocationId: transactionItem?.poLineLocationId,
+            DestinationTypeCode: transactionItem?.destinationTypeCode,
+            Subinventory: transactionItem?.Subinventory,
+            Locator: transactionItem?.Locator,
+            ShipmentNumber: transactionItem?.ShipmentNumber,
+            LpnNumber: transactionItem?.LpnNumber,
+            OrderLineId: transactionItem?.OrderLineId,
           },
         ],
       },
@@ -319,7 +343,6 @@ export class SharedService {
     const rows = []
     try {
       const query = `SELECT * FROM ${tableName};`
-    //  const query = `SELECT * FROM ${tableName};`
       const records = await this.sqliteService.executeCustonQuery(query, []);
       if (records.rows.length > 0) {
         for (let i = 0; i < records.rows.length; i++) {
@@ -334,9 +357,107 @@ export class SharedService {
     return rows
   }
 
-  async getCustomUomTableData(tableName: string, data: any) {
-    
-  }
+// ------------------reference --------------------
+
+   // buildPayloadFromTransaction(payload: any, index: any) {
+  //   const requestBody = {
+  //     id: `part${index + 1}`,
+  //     path: '/receivingReceiptRequests',
+  //     operation: 'create',
+  //     payload: {
+  //       ReceiptSourceCode: payload?.ReceiptSourceCode,
+  //       OrganizationCode: payload?.OrganizationCode,
+  //       EmployeeId: this.userDetails.PERSON_ID,
+  //       BusinessUnitId: this.selectedOrg?.BusinessUnitId,
+  //       ReceiptNumber: payload?.receiptInfo,
+  //       BillOfLading: '',
+  //       FreightCarrierName: '',
+  //       PackingSlip: '',
+  //       WaybillAirbillNumber: '',
+  //       ShipmentNumber: '',
+  //       ShippedDate: '',
+  //       VendorSiteId: '',
+  //       VendorId: parseInt(payload?.vendorId),
+  //       attachments: [],
+  //       CustomerId: '',
+  //       InventoryOrgId: this.selectedOrg?.InventoryOrgId_PK,
+  //       DeliveryDate: '31-Jan-2024 12:00:00',
+  //       ResponsibilityId: '20634',
+  //       UserId: this.userDetails.USER_ID,
+  //       DummyReceiptNumber: new Date().getTime(),
+  //       BusinessUnit: 'Vision Operations',
+  //       InsertAndProcessFlag: 'true',
+  //       lines: [
+  //         {
+  //           ReceiptSourceCode: payload?.ReceiptSourceCode,
+  //           MobileTransactionId: new Date().getTime(),
+  //           TransactionType: payload?.TransactionType,
+  //           AutoTransactCode: payload.AutoTransactCode,
+  //           OrganizationCode: payload?.OrganizationCode,
+  //           DocumentNumber: payload?.poNumber,
+  //           DocumentLineNumber: payload?.shipLaneNum,
+  //           ItemNumber: payload?.itemNumber,
+  //           TransactionDate: formatDate(new Date(), "dd-MM-yyyy HH:mm:ss", "en-US"),
+  //           Quantity: payload?.quantityReceived,
+  //           UnitOfMeasure: payload?.unitOfMeasure,
+  //           SoldtoLegalEntity: payload?.SoldtoLegalEntity,
+  //           SecondaryUnitOfMeasure: payload?.SecondaryUnitOfMeasure,
+  //           ShipmentHeaderId: payload?.ShipmentHeaderId,
+  //           ItemRevision: payload?.ItemRevision != null ? payload?.ItemRevision : "",
+  //           POHeaderId: parseInt(payload?.poHeaderId),
+  //           POLineLocationId: parseInt(payload?.poLineLocationId),
+  //           POLineId: parseInt(payload?.poLineId),
+  //           PODistributionId: parseInt(payload?.poDistributionId),
+  //           ReasonName: '',
+  //           Comments: '',
+  //           ShipmentLineId: '',
+  //           transactionAttachments: [],
+  //           lotItemLots: (payload?.lotQuantity && payload?.lotQuantity.trim() !== "")
+  //             ? this.buildLotPayload(payload?.lotQuantity, payload?.lotCode)
+  //             : [],
+  //           serialItemSerials: (payload?.serialNumbers && payload?.serialNumbers.trim() !== "")
+  //             ? payload?.serialNumbers.split(',').map((serial: any) => ({
+  //               fromSerial: serial ? serial : "",
+  //               toSerial: serial ? serial : ""
+  //             }))
+  //             : [],
+  //           lotSerialItemLots: [],
+  //           ExternalSystemTransactionReference: 'Mobile Transaction',
+  //           ReceiptAdviceHeaderId: '',
+  //           ReceiptAdviceLineId: '',
+  //           TransferOrderHeaderId: '',
+  //           TransferOrderLineId: '',
+  //           PoLineLocationId: payload?.poLineLocationId,
+  //           DestinationTypeCode: payload?.destinationTypeCode,
+  //           Subinventory: payload?.Subinventory,
+  //           Locator: payload?.Locator,
+  //           ShipmentNumber: payload?.ShipmentNumber,
+  //           LpnNumber: payload?.LpnNumber,
+  //           OrderLineId: payload?.OrderLineId,
+  //         },
+  //       ],
+  //     },
+  //   };
+  //   return requestBody;
+  // }
+
+  // buildLotPayload(lotQuant: any, lotCodes: any) {
+  //   if (lotQuant != "" || lotQuant != null || lotCodes != "" || lotCodes != null) {
+  //     const lotNumbers = lotCodes.split(',');
+  //     const lotQuantities = lotQuant.split(',');
+  //     const resultArray = lotNumbers.map((lotNumber: any, index: any) => ({
+  //       GradeCode: '',
+  //       LotExpirationDate: formatDate(new Date(), "dd-MM-yyyy HH:mm:ss", "en-US"),
+  //       LotNumber: lotNumber ? lotNumber : "",
+  //       ParentLotNumber: '',
+  //       SecondaryTransactionQuantity: '',
+  //       TransactionQuantity: lotQuantities[index] ? lotQuantities[index] : "",
+  //     }));
+  //     return resultArray;
+  //   }
+  //   return [];
+
+  // }
 
   mapTypeToSql(type: string) {
     switch (type) {

@@ -7,6 +7,7 @@ import { IonicModule } from '@ionic/angular';
 import { GoodsReceiptPageRoutingModule } from './goods-receipt-routing.module';
 
 import { GoodsReceiptPage } from './goods-receipt.page';
+import { ScanPage } from '../shared-components/scan/scan.page';
 
 @NgModule({
   imports: [
@@ -15,6 +16,9 @@ import { GoodsReceiptPage } from './goods-receipt.page';
     IonicModule,
     GoodsReceiptPageRoutingModule
   ],
-  declarations: [GoodsReceiptPage]
+  declarations: [
+    GoodsReceiptPage,
+    ScanPage
+  ]
 })
 export class GoodsReceiptPageModule {}

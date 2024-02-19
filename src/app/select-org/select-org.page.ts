@@ -20,7 +20,7 @@ export class SelectOrgPage implements OnInit, OnDestroy {
   isAllOrgTableDataLoaded: boolean = false;
   isOrgSelected: boolean = false;
   selectedOrg: any;
-  public organisations: Org[] = [];
+  organisations: Org[] = [];
   searchTerm: string = "";
   activeSubscriptions: Subscription[] = [];
 
@@ -62,8 +62,9 @@ export class SelectOrgPage implements OnInit, OnDestroy {
           this.organisations = [...this.orgList] 
         } 
       },
-        error: (err) => {
-          console.log(err);
+        error: async (err) => {
+          await this.uiproviderService.presentToast('Error', 'Error while fetching data from server', "danger");
+          await this.uiproviderService.presentToast('Error', 'Pull from top to refresh', 'danger');
         },
         complete: () => {
           this.uiproviderService.dismissLoading();

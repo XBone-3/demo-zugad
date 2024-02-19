@@ -3,6 +3,7 @@ import { SqliteService } from '../providers/sqlite.service';
 import { docsForReceivingTableName, PoInterface } from '../CONSTANTS/CONSTANTS';
 import { NavController } from '@ionic/angular';
 import { NodeApiService } from '../providers/node-api.service';
+import { UiProviderService } from '../providers/ui-provider.service';
 
 
 @Component({
@@ -21,7 +22,8 @@ export class GoodsReceiptPage implements OnInit {
   constructor(
     private sqliteService: SqliteService,
     private navCtrl: NavController,
-    private apiService: NodeApiService
+    private apiService: NodeApiService,
+    private uiProviderService: UiProviderService
   ) { 
     
   }
@@ -41,14 +43,6 @@ export class GoodsReceiptPage implements OnInit {
     const paginated_data = await this.sqliteService.executeCustonQuery(query)
     if( paginated_data.rows.length > 0 ){
       for (let i = 0; i < paginated_data.rows.length; i++) {
-        // this.doc = {
-        //   PO_NUMBER: paginated_data.rows.item(i).PoNumber,
-        //   PO_TYPE: paginated_data.rows.item(i).PoType,
-        //   VENDOR_NAME: paginated_data.rows.item(i).VendorName,
-        //   LAST_UPDATE_DATE: new Date(paginated_data.rows.item(i).LastUpdateDate),
-        //   REQUESTOR: paginated_data.rows.item(i).Requestor,
-        //   TOTAL: paginated_data.rows.item(i).total
-        // }
         this.docsForReceiving.push(paginated_data.rows.item(i));
       }
       this.receipts = [...this.docsForReceiving]
@@ -59,6 +53,29 @@ export class GoodsReceiptPage implements OnInit {
     this.offset += 10;
     this.paginationData();
     event.target.complete();
+  }
+
+  clearSearch() {
+    this.searchText = '';
+    this.receipts = [...this.docsForReceiving]
+  }
+
+  async scan(val: any) {
+    if (val) {
+      const query = `SELECT * FROM ${docsForReceivingTableName} WHERE PoNumber LIKE '%${this.searchText}%' GROUP BY PoNumber`;
+      const data = await this.sqliteService.executeCustonQuery(query)
+      if (data.rows.length > 0) {
+        for (let i = 0; i < data.rows.length; i++) {
+          this.docsForReceiving.push(data.rows.item(i));
+        }
+        this.receipts = [...this.docsForReceiving]
+        this.onSearch(val)
+      } else {
+        console.log('No data');
+      }
+      
+    }
+    
   }
 
   onSearch(event: any) {

@@ -46,12 +46,13 @@ export class NodeApiService {
       const params = this.generateParams();
       this.fetchAllByUrl(ApiSettings.Docs4ReceivingUrl + params).subscribe({
         next: async (resp: any) => {
-          const columns = Object.keys(resp.Docs4Receiving[0])
+          if (resp && resp.status === 200) {
+            const columns = Object.keys(resp.body.Docs4Receiving[0])
           try {
         //     await this.sqliteService.dropTable(docsForReceivingTableName);
         // await this.createDocs4ReceivingTable(docsForReceivingTableName, columns);
 
-            await resp.Docs4Receiving.forEach(async (element: any) => {
+            await resp.body.Docs4Receiving.forEach(async (element: any) => {
               if (element.Flag === 'D') {
                 await this.sqliteService.executeCustonQuery(`DELETE FROM ${docsForReceivingTableName} WHERE OrderLineId=? AND PoLineLocationId=? AND ShipmentLineId=?`, [element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);
               } else {
@@ -66,11 +67,17 @@ export class NodeApiService {
               await this.sqliteService.executeCustonQuery(updateQuery, [element['QtyOrdered'], element['QtyReceived'], element['QtyRemaining'], element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);
               }
             })
-          } catch (error) {
-            console.log('error in performDeltaSync: ', error);
-          }
-          this.authService.lastLoginDate = formatDate(new Date(), "dd-MM-yyyy HH:mm:ss", "en-US")
+            } catch (error) {
+              console.log('error in performDeltaSync: ', error);
+            }
+            this.authService.lastLoginDate = formatDate(new Date(), "dd-MM-yyyy HH:mm:ss", "en-US")
         
+          } else if (resp && resp.status === 204) {
+            console.log('no docs for receiving in delta');
+          } else {
+            console.log('error in performDeltaSync: ', resp);
+          }
+          
         }, error: (err) => {
           console.log('error in performDeltaSync: ', err);
         }
@@ -78,10 +85,7 @@ export class NodeApiService {
     })
      
   }
-  //  async createDocs4ReceivingTable(table_name: string, columns: any) {
-  //   let createDocs4ReceivingTableQuery = `CREATE TABLE IF NOT EXISTS ${table_name} (${columns.join(',')})`;
-  //   await this.sqliteService.createTable(createDocs4ReceivingTableQuery, table_name);
-  // }
+
 
    generateParams() {
     const orgId = localStorage.getItem('orgId_pk');
@@ -130,82 +134,7 @@ export class NodeApiService {
    }
 
    fetchAllByUrl(url: string) {
-     return this.http.get(url, {responseType: 'json'});
+     return this.http.get(url, {observe: 'response'});
    }
 
-   generatePayloadBody(payload: any, selectedOrg: any, user: any, quantity: any, id: number ) {
-    const payloadObj = {
-                  "id": `part${id}`,
-                  "path": "/receivingReceiptRequests",
-                  "operation": "create",
-                  "payload": {
-                      "ReceiptSourceCode": "",
-                      "OrganizationCode": "",
-                      "EmployeeId": user.PERSON_ID,
-                      "BusinessUnitId": selectedOrg.BusinessUnitId,
-                      "ReceiptNumber": "",
-                      "BillOfLading": "",
-                      "FreightCarrierName": "",
-                      "PackingSlip": "",
-                      "WaybillAirbillNumber": "",
-                      "ShipmentNumber": "",
-                      "ShippedDate": "",
-                      "VendorSiteId": "",
-                      "VendorId": payload.VendorId,
-                      "attachments": [],
-                      "CustomerId": "",
-                      "InventoryOrgId": selectedOrg.InventoryOrgId_PK,
-                      "DeliveryDate": "29-Jan-2024 19:32:44",
-                      "ResponsibilityId": "20634",
-                      "UserId": user.USER_ID,
-                      "DummyReceiptNumber": new Date().getTime(),
-                      "BusinessUnit": "Vision Operations",
-                      "InsertAndProcessFlag": "true",
-                      "lines": [
-                          {
-                              "ReceiptSourceCode": "",
-                              "MobileTransactionId": new Date().getTime(),
-                              "TransactionType": "RECEIVE",
-                              "AutoTransactCode": "RECEIVE",
-                              "OrganizationCode": "",
-                              "DocumentNumber": payload.PoNumber,
-                              "DocumentLineNumber": "2",
-                              "ItemNumber": payload.ItemNumber,
-                              "TransactionDate": "29-Jan-2024 19:32:44",
-                              "Quantity": quantity,
-                              "UnitOfMeasure": "Ea",
-                              "SoldtoLegalEntity": "",
-                              "SecondaryUnitOfMeasure": "",
-                              "ShipmentHeaderId": "",
-                              "ItemRevision": "",
-                              "POHeaderId": payload.PoHeaderId,
-                              "POLineLocationId": payload.PoLineLocationId,
-                              "POLineId": payload.PoLineId,
-                              "PODistributionId": payload.PoDistributionId,
-                              "ReasonName": "",
-                              "Comments": "",
-                              "ShipmentLineId": "",
-                              "transactionAttachments": [],
-                              "lotItemLots": [],
-                              "serialItemSerials": [],
-                              "lotSerialItemLots": [],
-                              "ExternalSystemTransactionReference": "Mobile Transaction",
-                              "ReceiptAdviceHeaderId": "",
-                              "ReceiptAdviceLineId": "",
-                              "TransferOrderHeaderId": "",
-                              "TransferOrderLineId": "",
-                              "PoLineLocationId": payload.PoLineLocationId,
-                              "DestinationTypeCode": payload.DestinationType,
-                              "Subinventory": "",
-                              "Locator": "",
-                              "ShipmentNumber": "",
-                              "LpnNumber": "",
-                              "OrderLineId": ""
-                          }
-                      ]
-                  }
-              }
-    return payloadObj;
-  }
-  
 }

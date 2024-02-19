@@ -166,10 +166,10 @@ export class ActivityPage implements OnInit, OnDestroy {
     const params = 'metadata'
     this.getGlPeriodsSubscription = this.apiService.fetchAllByUrl(ApiSettings.glPeriodsUrl + params).subscribe({
       next: async (resp: any) => {
-        if (resp) {
+        if (resp && resp.status === 200) {
           try {
             this.loadGlPeriodsMessage = 'Creating table'
-            await this.sharedService.createMetaDataTable(resp, glPeriodsTableName)
+            await this.sharedService.createMetaDataTable(resp.body, glPeriodsTableName)
             // const columns = resp.map((obj: any) => obj.name)
             // await this.getGlPeriodsData()
             
@@ -177,6 +177,12 @@ export class ActivityPage implements OnInit, OnDestroy {
             this.loadGlPeriodsMessage = 'Failed to create table'
             console.error(error);
           }
+        } else if (resp && resp.status === 204) {
+          this.loadGlPeriodsMessage = 'No metadata available'
+          this.success = false
+        } else {
+          console.log('No metadata available');
+          this.uiProviderService.presentToast('Error', 'No metadata available for gl periods', 'danger');
         }
       }, error: (error) => {
         console.error(error);
@@ -190,16 +196,25 @@ export class ActivityPage implements OnInit, OnDestroy {
     const params = `${this.defaultOrgId}`;
     this.getGlPeriodsDataSubscription = this.apiService.fetchAllByUrl(ApiSettings.glPeriodsUrl + params).subscribe({
       next: async (resp: any) => {
-        try {
-          this.loadGlPeriodsMessage = 'Inserting data'
-          const glPeriods = resp.GLPeriods
-          await this.sharedService.insertDataToTable(glPeriods, glPeriodsTableName)
-          this.loadGlPeriodsMessage = 'Data inserted'
-          this.loadGlPeriodStatus = false
-        } catch (error) {
-          alert('gl periods' +JSON.stringify(error))
-          this.loadGlPeriodsMessage = 'Failed to insert data'
+        if (resp && resp.status === 200) {
+          try {
+            this.loadGlPeriodsMessage = 'Inserting data'
+            const glPeriods = resp.body.GLPeriods
+            await this.sharedService.insertDataToTable(glPeriods, glPeriodsTableName)
+            this.loadGlPeriodsMessage = 'Data inserted'
+            this.loadGlPeriodStatus = false
+          } catch (error) {
+            alert('gl periods' +JSON.stringify(error))
+            this.loadGlPeriodsMessage = 'Failed to insert data'
+          }
+        } else if (resp && resp.status === 204) {
+          this.loadGlPeriodsMessage = 'No metadata available'
+          this.success = false
+        } else {
+          console.log('No metadata available');
+          this.uiProviderService.presentToast('Error', 'No metadata available for gl periods', 'danger');
         }
+        
       }, error: (error) => {
         console.error(error);
         this.success = false
@@ -211,16 +226,22 @@ export class ActivityPage implements OnInit, OnDestroy {
     const params = 'metadata'
     this.getUomSubscription = this.apiService.fetchAllByUrl(ApiSettings.uomUrl + params).subscribe({
       next: async (resp: any) => {
-        if (resp) {
+        if (resp && resp.status === 200) {
           try {
             this.loadUomMessage = 'Creating table'
-            await this.sharedService.createMetaDataTable(resp, uomTableName)
+            await this.sharedService.createMetaDataTable(resp.body, uomTableName)
           } catch (error) {
             console.error(error);
             this.loadUomMessage = 'Failed to create table'
             // this.uiProviderService.presentToast('Error', 'failed to get uom table', 'danger');
             // this.success = false
           }
+        } else if (resp && resp.status === 204) {
+          this.loadUomMessage = 'No metadata available'
+          this.success = false
+        } else {
+          console.log('No metadata available');
+          this.uiProviderService.presentToast('Error', 'No metadata available for uom', 'danger');
         }
       }, error: (error) => {
         console.error(error);
@@ -233,16 +254,25 @@ export class ActivityPage implements OnInit, OnDestroy {
     const params = `${this.organisation.InventoryOrgId_PK}/''`;
     this.getUomDataSubscription = this.apiService.fetchAllByUrl(ApiSettings.uomUrl + params).subscribe({
       next: async (resp: any) => {
-        try {
-          this.loadUomMessage = 'Inserting data'
-          const uom = resp.Items
-          await this.sharedService.insertDataToTable(uom, uomTableName)
-          this.loadUomMessage = 'Data inserted'
-          this.loadUomStatus = false
-        } catch (error) {
-          alert('uom' + JSON.stringify(error))
-          this.loadUomMessage = 'Failed to insert data'
+        if (resp && resp.status === 200) {
+          try {
+            this.loadUomMessage = 'Inserting data'
+            const uom = resp.body.Items
+            await this.sharedService.insertDataToTable(uom, uomTableName)
+            this.loadUomMessage = 'Data inserted'
+            this.loadUomStatus = false
+          } catch (error) {
+            alert('uom' + JSON.stringify(error))
+            this.loadUomMessage = 'Failed to insert data'
+          }
+        } else if (resp && resp.status === 204) {
+          this.loadUomMessage = 'No metadata available'
+          this.success = false
+        } else {
+          console.log('No metadata available');
+          this.uiProviderService.presentToast('Error', 'No metadata available for uom', 'danger');
         }
+       
       }, error: (error) => {
         console.error(error);
         this.success = false
@@ -254,16 +284,22 @@ export class ActivityPage implements OnInit, OnDestroy {
     const params = 'metadata'
     this.getRevisionsSubscription = this.apiService.fetchAllByUrl(ApiSettings.revisionsUrl + params).subscribe({
       next: async (resp: any) => {
-        if (resp) {
+        if (resp && resp.status === 200) {
           try {
             this.loadRevisionsMessage = 'Creating table'
-            await this.sharedService.createMetaDataTable(resp, revisionTableName)
+            await this.sharedService.createMetaDataTable(resp.body, revisionTableName)
           } catch (error) {
             console.error(error);
             this.loadRevisionsMessage = 'Failed to create table'
             // this.uiProviderService.presentToast('Error', 'failed to get revisions table', 'danger');
             // this.success = false
           }
+        } else if (resp && resp.status === 204) {
+          this.loadRevisionsMessage = 'No metadata available'
+          this.success = false
+        } else {
+          console.log('No metadata available');
+          this.uiProviderService.presentToast('Error', 'No metadata available for revisions', 'danger');
         }
       }, error: (error) => {
         console.error(error);
@@ -276,16 +312,25 @@ export class ActivityPage implements OnInit, OnDestroy {
     const params = `${this.organisation.InventoryOrgId_PK}/''`;
     this.getRevisionsDataSubscription = this.apiService.fetchAllByUrl(ApiSettings.revisionsUrl + params).subscribe({
       next: async (resp: any) => {
-        try {
-          this.loadRevisionsMessage = 'Inserting data'
-          const revisions = resp.Items
-          await this.sharedService.insertDataToTable(revisions, revisionTableName)
-          this.loadRevisionsMessage = 'Data inserted'
-          this.loadRevisionsStatus = false
-        } catch (error) {
-          alert('revisions' + JSON.stringify(error))
-          this.loadRevisionsMessage = 'Failed to insert data'
+        if (resp && resp.status === 200) {
+          try {
+            this.loadRevisionsMessage = 'Inserting data'
+            const revisions = resp.body.Items
+            await this.sharedService.insertDataToTable(revisions, revisionTableName)
+            this.loadRevisionsMessage = 'Data inserted'
+            this.loadRevisionsStatus = false
+          } catch (error) {
+            alert('revisions' + JSON.stringify(error))
+            this.loadRevisionsMessage = 'Failed to insert data'
+          }
+        } else if (resp && resp.status === 204) {
+          this.loadRevisionsMessage = 'No metadata available'
+          this.success = false
+        } else {
+          console.log('No metadata available');
+          this.uiProviderService.presentToast('Error', 'No metadata available for revisions', 'danger');
         }
+        
       }, error: (error) => {
         console.error(error);
         this.success = false
@@ -297,10 +342,10 @@ export class ActivityPage implements OnInit, OnDestroy {
     const params = 'metadata'
     this.getPurchasingPeriodsSubscription = this.apiService.fetchAllByUrl(ApiSettings.purchasingeriodsUrl + params).subscribe({
       next: async (resp: any) => {
-        if (resp) {
+        if (resp && resp.status === 200) {
           try {
             this.loadPurchasingPeriodsMessage = 'Creating table'
-            await this.sharedService.createMetaDataTable(resp, purchasingPeriodsTableName)
+            await this.sharedService.createMetaDataTable(resp.body, purchasingPeriodsTableName)
             // await this.getPurchasingPeriodsData()
           } catch (error) {
             console.error(error);
@@ -308,6 +353,12 @@ export class ActivityPage implements OnInit, OnDestroy {
             // this.uiProviderService.presentToast('Error', 'failed to get purchasing periods table', 'danger');
             // this.success = false
           }
+        } else if (resp && resp.status === 204) {
+          this.loadPurchasingPeriodsMessage = 'No metadata available'
+          this.success = false
+        } else {
+          console.log('No metadata available');
+          this.uiProviderService.presentToast('Error', 'No metadata available for purchasing periods', 'danger');
         }
       }, error: (error) => {
         console.error(error);
@@ -320,17 +371,26 @@ export class ActivityPage implements OnInit, OnDestroy {
     const params = `${this.defaultOrgId}`;
     this.getPurchasingPeriodsDataSubscription = this.apiService.fetchAllByUrl(ApiSettings.purchasingeriodsUrl + params).subscribe({
       next: async (resp: any) => {
-        try {
-          this.loadPurchasingPeriodsMessage = 'Inserting data'
-          const purchasingPeriods = resp.POPeriods
-          
-          await this.sharedService.insertDataToTable(purchasingPeriods, purchasingPeriodsTableName)
-          this.loadPurchasingPeriodsMessage = 'Data inserted'
-          this.loadPurchasingPeriodsStatus = false
-        } catch (error) {
-          alert('purchasing periods' + JSON.stringify(error))
-          this.loadPurchasingPeriodsMessage = 'Failed to insert data'
+        if (resp && resp.status === 200) {
+          try {
+            this.loadPurchasingPeriodsMessage = 'Inserting data'
+            const purchasingPeriods = resp.body.POPeriods
+            
+            await this.sharedService.insertDataToTable(purchasingPeriods, purchasingPeriodsTableName)
+            this.loadPurchasingPeriodsMessage = 'Data inserted'
+            this.loadPurchasingPeriodsStatus = false
+          } catch (error) {
+            alert('purchasing periods' + JSON.stringify(error))
+            this.loadPurchasingPeriodsMessage = 'Failed to insert data'
+          }
+        } else if (resp && resp.status === 204) {
+          this.loadPurchasingPeriodsMessage = 'No metadata available'
+          this.success = false
+        } else {
+          console.log('No metadata available');
+          this.uiProviderService.presentToast('Error', 'No metadata available for purchasing periods', 'danger');
         }
+        
       }, error: (error) => {
         console.error(error);
         this.success = false
@@ -342,10 +402,10 @@ export class ActivityPage implements OnInit, OnDestroy {
     const params = 'metadata'
     this.getReasonsSubscription = this.apiService.fetchAllByUrl(ApiSettings.reasonsConfigUrl + params).subscribe({
       next: async (resp: any) => {
-        if (resp) {
+        if (resp && resp.status === 200) {
           try {
             this.loadReasonsMessage = 'Creating table'
-            await this.sharedService.createMetaDataTable(resp, getReasonsTableName)
+            await this.sharedService.createMetaDataTable(resp.body, getReasonsTableName)
             // const columns = resp.map((obj: any) => obj.name)
             // await this.getReasonsData()
           } catch (error) {
@@ -354,6 +414,12 @@ export class ActivityPage implements OnInit, OnDestroy {
             // this.uiProviderService.presentToast('Error', 'failed to get reasons table', 'danger');
             // this.success = false
           }
+        } else if (resp && resp.status === 204) {
+          this.loadReasonsMessage = 'No metadata available'
+          this.success = false
+        } else {
+          console.log('No metadata available');
+          this.uiProviderService.presentToast('Error', 'No metadata available for reasons', 'danger');
         }
       }, error: (error) => {
         console.error(error);
@@ -365,17 +431,26 @@ export class ActivityPage implements OnInit, OnDestroy {
   async getReasonsData() {
     this.getReasonsDataSubscription = this.apiService.fetchAllByUrl(ApiSettings.reasonsConfigUrl).subscribe({
       next: async (resp: any) => {
-        try {
-          this.loadReasonsMessage = 'Inserting data'
-          const reasons = resp.Reasons
-          
-          await this.sharedService.insertDataToTable(reasons, getReasonsTableName)
-          this.loadReasonsMessage = 'Data inserted'
-          this.loadReasonsStatus = false
-        } catch (error) {
-          alert('reasons' +JSON.stringify(error))
-          this.loadReasonsMessage = 'Failed to insert data'
+        if (resp && resp.status === 200) {
+          try {
+            this.loadReasonsMessage = 'Inserting data'
+            const reasons = resp.body.Reasons
+            
+            await this.sharedService.insertDataToTable(reasons, getReasonsTableName)
+            this.loadReasonsMessage = 'Data inserted'
+            this.loadReasonsStatus = false
+          } catch (error) {
+            alert('reasons' +JSON.stringify(error))
+            this.loadReasonsMessage = 'Failed to insert data'
+          }
+        } else if (resp && resp.status === 204) {
+          this.loadReasonsMessage = 'No metadata available'
+          this.success = false
+        } else {
+          console.log('No metadata available');
+          this.uiProviderService.presentToast('Error', 'No metadata available for reasons', 'danger');
         }
+        
       },
       error: (error) => {
         console.error(error);
@@ -388,11 +463,11 @@ export class ActivityPage implements OnInit, OnDestroy {
     const params = 'metadata'
     this.D4RmetadataSubscription = this.apiService.fetchAllByUrl(ApiSettings.Docs4ReceivingUrl + params).subscribe({
       next: async (resp: any) => {
-        if (resp) {
+        if (resp && resp.status === 200) {
           try {
             this.loadDocsForReceiving = 'creating Table';
             
-            await this.sharedService.createMetaDataTable(resp, docsForReceivingTableName);
+            await this.sharedService.createMetaDataTable(resp.body, docsForReceivingTableName);
             
             
             // await this.getDocsForReceivingData();
@@ -400,6 +475,9 @@ export class ActivityPage implements OnInit, OnDestroy {
             this.loadDocsForReceiving = 'failed to create Table';
             this.uiProviderService.presentToast('Error', 'failed to create Docs For Receiving table', 'danger');
           }
+        } else if (resp && resp.status === 204) {
+          this.loadDocsForReceiving = 'No metadata available';
+          this.success = false
         } else {
           console.log('No metadata available');
           this.uiProviderService.presentToast('Error', 'No metadata available for Docs For Receiving', 'danger');
@@ -416,10 +494,11 @@ export class ActivityPage implements OnInit, OnDestroy {
     const params = `${this.organisation.InventoryOrgId_PK}/""/""`;
     this.docsForReceivingSubscription = this.apiService.fetchAllByUrl(ApiSettings.Docs4ReceivingUrl + params).subscribe({
       next: async (resp: any) => {
-        this.docs = resp.Docs4Receiving.length
+        if (resp && resp.status === 200) {
+          this.docs = resp.body.Docs4Receiving.length
         try {
           this.loadDocsForReceiving = 'Inserting Data';
-          await this.sharedService.insertDataToTableChunks(resp.Docs4Receiving, docsForReceivingTableName)
+          await this.sharedService.insertDataToTableChunks(resp.body.Docs4Receiving, docsForReceivingTableName)
           this.loadDocsForReceiving = 'Data inserted';
           this.loadDocsForReceivingStatus = false
           // await this.apiService.setValue('isDocs4ReceivingTableEmpty', false);
@@ -428,6 +507,14 @@ export class ActivityPage implements OnInit, OnDestroy {
           this.loadDocsForReceiving = 'failed to create Table';
           this.uiProviderService.presentToast('Error', 'Failed to load Docs4Receiving Table/data', 'danger');
         }
+        } else if (resp && resp.status === 204) {
+          this.loadDocsForReceiving = 'No metadata available';
+          this.success = false
+        } else {
+          console.log('No metadata available');
+          this.uiProviderService.presentToast('Error', 'No metadata available for Docs For Receiving', 'danger');
+        }
+        
       },
       error: (err) => {
         console.log(err);
@@ -439,12 +526,12 @@ export class ActivityPage implements OnInit, OnDestroy {
     const params = 'metadata'
     this.subInvMetadataSubscription = this.apiService.fetchAllByUrl(ApiSettings.subInventoryUrl + params).subscribe({
       next: async (resp: any) => {
-        if (resp) {
+        if (resp && resp.status === 200) {
           try {
             // alert('sub inventory' +JSON.stringify(resp))
             this.loadSubInventoryMessage = 'creating Table';
             
-            await this.sharedService.createMetaDataTable(resp, subInventoryTableName)
+            await this.sharedService.createMetaDataTable(resp.body, subInventoryTableName)
             
             
             // await this.getSubInventoryData();
@@ -454,8 +541,12 @@ export class ActivityPage implements OnInit, OnDestroy {
             alert('sub inventory' +JSON.stringify(error));
             this.uiProviderService.presentToast('Error', 'failed to create sub inventory table', 'danger');
           }
+        } else if (resp && resp.status === 204) {
+          this.loadSubInventoryMessage = 'No metadata available';
+          this.success = false
         } else {
           console.log('No metadata available');
+          this.uiProviderService.presentToast('Error', 'No metadata available for sub inventory', 'danger');
         }
         }, error: (err) => {
         console.log(err);
@@ -468,10 +559,10 @@ export class ActivityPage implements OnInit, OnDestroy {
     const params = `${this.organisation.InventoryOrgId_PK}/""/""`;
     this.subInventorySubscription = this.apiService.fetchAllByUrl(ApiSettings.subInventoryUrl + params).subscribe({
       next: async (resp: any) => {
-        if (resp) {
+        if (resp && resp.status === 200) {
           try {
             this.loadSubInventoryMessage = 'Inserting Data';
-            const ActiveSubInventories = resp.ActiveSubInventories;
+            const ActiveSubInventories = resp.body.ActiveSubInventories;
             await this.sharedService.insertDataToTable(ActiveSubInventories, subInventoryTableName);
             this.loadSubInventoryMessage = 'Sub Inventories created';
             this.loadSubInventoryStatus = false
@@ -480,6 +571,9 @@ export class ActivityPage implements OnInit, OnDestroy {
             alert('sub inventory data' +JSON.stringify(error))
             this.uiProviderService.presentToast('Error', 'failed to create sub inventory table', 'danger');
           }
+        } else if (resp && resp.status === 204) {
+          this.loadSubInventoryMessage = 'No metadata available';
+          this.success = false
         } else {
           console.log('No metadata available');
           this.uiProviderService.presentToast('Error', 'No metadata available for sub inventory', 'danger');
@@ -496,15 +590,24 @@ export class ActivityPage implements OnInit, OnDestroy {
     const params = 'metadata'
     this.locatorsMetaDataSubscription = this.apiService.fetchAllByUrl(ApiSettings.locatorsURL + params).subscribe({
       next: async (resp: any) => {
-        try {
-          this.loadLocatorsMessage = 'Creating Table';
-          await this.sharedService.createMetaDataTable(resp, locatorsTableName)
-          // await this.getLocatorsData()
-        } catch (error) {
-          console.log(error) 
-          this.loadLocatorsMessage = 'Failed to create table'
-          this.uiProviderService.presentToast('Error', 'failed to create locators table', 'danger');         
+        if (resp && resp.status === 200) {
+          try {
+            this.loadLocatorsMessage = 'Creating Table';
+            await this.sharedService.createMetaDataTable(resp.body, locatorsTableName)
+            // await this.getLocatorsData()
+          } catch (error) {
+            console.log(error) 
+            this.loadLocatorsMessage = 'Failed to create table'
+            this.uiProviderService.presentToast('Error', 'failed to create locators table', 'danger');         
+          }
+        } else if (resp && resp.status === 204) {
+          this.loadLocatorsMessage = 'No metadata available';
+          this.success = false
+        } else {
+          console.log('No metadata available');
+          this.uiProviderService.presentToast('Error', 'No metadata available for locators', 'danger');
         }
+        
       },
       error: (error) => {
         console.error(error)
@@ -518,18 +621,27 @@ export class ActivityPage implements OnInit, OnDestroy {
     const params = `${this.organisation.InventoryOrgId_PK}/${this.authService.lastLoginDate}/""`;
     this.locatorsDataSubscription = this.apiService.fetchAllByUrl(ApiSettings.locatorsURL + params).subscribe({
       next: async (resp: any) => {
-        try {
-          this.loadLocatorsMessage = 'Inserting Data';
-          const ActiveLocators = resp.ActiveLocators
-          await this.sharedService.insertDataToTableChunks(ActiveLocators, locatorsTableName)
-          this.loadLocatorsMessage = 'Locators created';
-          this.loadLocatorsStatus = false
-        } catch (error) {
-          console.log(error)
-          this.loadLocatorsMessage = 'Failed to insert data'
-          // this.uiProviderService.presentToast('Error', 'failed to get locators table data', 'danger');
-          // this.success = false
+        if (resp && resp.status === 200) {
+          try {
+            this.loadLocatorsMessage = 'Inserting Data';
+            const ActiveLocators = resp.body.ActiveLocators
+            await this.sharedService.insertDataToTableChunks(ActiveLocators, locatorsTableName)
+            this.loadLocatorsMessage = 'Locators created';
+            this.loadLocatorsStatus = false
+          } catch (error) {
+            console.log(error)
+            this.loadLocatorsMessage = 'Failed to insert data'
+            // this.uiProviderService.presentToast('Error', 'failed to get locators table data', 'danger');
+            // this.success = false
+          }
+        } else if (resp && resp.status === 204) {
+          this.loadLocatorsMessage = 'No metadata available';
+          this.success = false
+        } else {
+          console.log('No metadata available');
+          this.uiProviderService.presentToast('Error', 'No metadata available for locators', 'danger');
         }
+        
       },
       error: (error) => {
         console.error(error)
@@ -543,11 +655,11 @@ export class ActivityPage implements OnInit, OnDestroy {
     const params = 'metadata'
     this.lotsMetaDataSubscription = this.apiService.fetchAllByUrl(ApiSettings.lotsUrl + params).subscribe({
       next: async (resp: any) => {
-        if (resp) {
+        if (resp && resp.status === 200) {
           
           try {
             this.loadLotsMessage = 'Creating Table';
-            await this.sharedService.createMetaDataTable(resp, lotsTableName)
+            await this.sharedService.createMetaDataTable(resp.body, lotsTableName)
             
             // await this.getLotsData()
           } catch (error) {
@@ -556,6 +668,9 @@ export class ActivityPage implements OnInit, OnDestroy {
             // this.uiProviderService.presentToast('Error', 'failed to create lots table', 'danger');
             // this.success = false
           }
+        } else if (resp && resp.status === 204) {
+          this.loadLotsMessage = 'No metadata available';
+          this.success = false
         } else {
           console.log('No metadata available');
           this.uiProviderService.presentToast('Error', 'No metadata available for lots', 'danger');
@@ -572,12 +687,12 @@ export class ActivityPage implements OnInit, OnDestroy {
     const params = `${this.organisation.InventoryOrgId_PK}/""`;
     this.lotsDataSubscription = this.apiService.fetchAllByUrl(ApiSettings.lotsUrl + params).subscribe({
       next: async (resp: any) => {
-        if (resp) {
+        if (resp && resp.status === 200) {
           try {
             this.loadLotsMessage = 'Creating Table';
-            await this.sharedService.createTableDataCSV(lotsTableName, resp)
+            await this.sharedService.createTableDataCSV(lotsTableName, resp.body)
             this.loadLotsMessage = 'Inserting Data';
-            await this.sharedService.insertDataToTableCSV(lotsTableName, resp)
+            await this.sharedService.insertDataToTableCSV(lotsTableName, resp.body)
             this.loadLotsMessage = 'Lots created';
             this.loadLotsStatus = false
           } catch (error) {
@@ -586,8 +701,12 @@ export class ActivityPage implements OnInit, OnDestroy {
             // this.uiProviderService.presentToast('Error', 'failed to get lots table data', 'danger');
             // this.success = false
           }
+        } else if (resp && resp.status === 204) {
+          this.loadLotsMessage = 'No metadata available';
+          this.success = false
         } else {
           console.log('No metadata available');
+          this.uiProviderService.presentToast('Error', 'No metadata available for lots', 'danger');
         }
       },
       error: (error) => {
@@ -602,10 +721,10 @@ export class ActivityPage implements OnInit, OnDestroy {
     const params = 'metadata'
     this.serialsMetaDataSubscription = this.apiService.fetchAllByUrl(ApiSettings.serialsUrl + params).subscribe({
       next: async (resp: any) => {
-        if (resp) {
+        if (resp && resp.status === 200) {
           try {
             this.loadSerialsMessage = 'Creating Table'
-            await this.sharedService.createMetaDataTable(resp, serialsTableName)
+            await this.sharedService.createMetaDataTable(resp.body, serialsTableName)
            
             // await this.getSerialsData()
           } catch (error) {
@@ -613,8 +732,13 @@ export class ActivityPage implements OnInit, OnDestroy {
             this.loadSerialsMessage = 'Failed to create table'
             // this.uiProviderService.presentToast('Error', 'failed to create serials table', 'danger');
           }
-        } else {
+        } else if (resp && resp.status === 204) {
+          this.loadSerialsMessage = 'No metadata available';
+          this.success = false
+        } 
+        else {
           console.log('No metadata available');
+          this.uiProviderService.presentToast('Error', 'No metadata available for serials', 'danger');
         }
       },
       error: (error) => {
@@ -629,12 +753,12 @@ export class ActivityPage implements OnInit, OnDestroy {
     const params = `${this.organisation.InventoryOrgId_PK}/""/""/""`;
     this.serialsDataSubscription = this.apiService.fetchAllByUrl(ApiSettings.serialsUrl + params).subscribe({
       next: async (resp: any) => {
-        if (resp) {
+        if (resp && resp.status === 200) {
           try {
             this.loadSerialsMessage = 'Creating Table'
-            await this.sharedService.createTableDataCSV(serialsTableName, resp)
+            await this.sharedService.createTableDataCSV(serialsTableName, resp.body)
             this.loadSerialsMessage = 'Inserting Data'
-            await this.sharedService.insertDataToTableCSV(serialsTableName, resp)
+            await this.sharedService.insertDataToTableCSV(serialsTableName, resp.body)
             this.loadSerialsMessage = 'Serials created';
             this.loadSerialsStatus = false
           } catch (error) {
@@ -643,7 +767,10 @@ export class ActivityPage implements OnInit, OnDestroy {
             // this.uiProviderService.presentToast('Error', 'failed to get serials table data', 'danger');
             // this.success = false
           }
-        } else {
+        } else if (resp && resp.status === 204) {
+          this.loadSerialsMessage = 'No metadata available';
+          this.success = false
+        }  else {
           console.log('No metadata available');
         }
       },

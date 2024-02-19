@@ -23,7 +23,6 @@ import { formatDate } from '@angular/common';
 export class ItemDetailsPage implements OnInit, OnDestroy {
 
   item!: any
-  private activatedSubscription!: Subscription;
   QtyReceiving: any = "";
   subInvName: string = '';
   locator: string = '';
@@ -33,12 +32,9 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
   selectedOrg: any;
   orgDetails: boolean = false;
   useravailable: boolean = false;
-  postitemSubscription!: Subscription;
-  networkSubscription!: Subscription;
   enableLot: boolean = false;
   apiResponse: any;
   hasNetwork: boolean = false;
-  docsForReceivingSubscription!: Subscription;
   itemData: any[] = [];
   uomCode: string = '';
   subInvCode: string = '';
@@ -49,6 +45,10 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
   SerialData: any[] = [];
   convertedLotData: any;
   lotData: any[] = [];
+  postitemSubscription!: Subscription;
+  networkSubscription!: Subscription;
+  activatedSubscription!: Subscription;
+  docsForReceivingSubscription!: Subscription;
 
 
   constructor(
@@ -93,36 +93,7 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
     this.networkSubscription = this.networkService.isNetworkAvailable().subscribe((networkStatus) => {
       this.hasNetwork = networkStatus
     })
-    alert(this.generateParams());
   }
-
-  // async insertTransaction(response: any) {
-  //   let query = `INSERT INTO ${transactionTableName} (PoNumber, quantityReceived, receiptNumber, message, status, shipLaneNum, VendorId, UOM, PoHeaderId, PoLineLocationId, PoLineId, PoDistributionId, DestinationType,ItemNumber)
-  //   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
-  //   let payload = [
-  //     this.item.PoNumber,
-  //     this.QtyReceiving, 
-  //     response[0].ReceiptNumber, 
-  //     response[0].Message, 
-  //     response[0].RecordStatus, 
-  //     this.item.PoShipmentNumber, 
-  //     this.item.VendorId, 
-  //     this.item.ItemUom, 
-  //     this.item.PoHeaderId, 
-  //     this.item.PoLineLocationId, 
-  //     this.item.PoLineId, 
-  //     this.item.PoDistributionId, 
-  //     this.item.DestinationType, 
-  //     this.item.ItemNumber
-  //   ]
-  //   try{
-  //     await this.sqliteService.executeCustonQuery(query, payload)
-  //     this.uiProviderService.presentToast('Success', 'Transaction saved to database');
-  //   } catch (error) {
-  //     console.log("error while inserting transaction: ",error)
-  //     this.uiProviderService.presentToast('error', 'Transaction not saved to database', 'danger');
-  //   }
-  // }
 
   UpdateQty() {
     if (this.QtyReceiving <= 0) {
@@ -168,9 +139,7 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
       this.uiProviderService.presentToast('error','Please enter quantity receiving');
       return;
     }
-    const transPayload = this.apiService.generatePayloadBody(this.item, this.selectedOrg, this.userDetails, this.QtyReceiving,1);
-    const payload = this.generateFullPayload([transPayload]);
-    const generatedPayload = this.generateGoodsRecpPayload(this.item);
+    const generatedPayload = this.buildGoodsReceiptPayload(this.item);
     this.uiProviderService.presentLoading('waiting for response...');
         if (this.hasNetwork) {
           this.postitemSubscription = this.apiService.performPost(ApiSettings.createGoodsReceiptUrl, generatedPayload).subscribe({next: async (resp: any) => {
@@ -199,12 +168,6 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
             }
           })
         } else {
-          // const responseStructure = [{
-          //   ReceiptNumber:'', 
-          //   TransactionId: '', 
-          //   Message: 'Network not available', 
-          //   RecordStatus: 'local'
-          // }]
           const offlinePayload = this.transactionObject();
 
           await this.sharedService.insertTransaction(offlinePayload, transactionTableName);
@@ -256,26 +219,16 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
     return offlinePayload;
   }
 
-  generateFullPayload(payloads: any[]) {
-    const payloadObj = {
-      "Input": {
-          "parts": payloads
-      }
-    }
-    return payloadObj
-  }
 
   async getDocsForReceivingPost() {
     const params = this.generateParams();
-    alert(JSON.stringify(params));
-    // const params = `${this.selectedOrg.InventoryOrgId_PK}/""/""`;
     this.docsForReceivingSubscription = this.apiService.fetchAllByUrl(ApiSettings.Docs4ReceivingUrl + params).subscribe({
       next: async (resp: any) => {
-        if (resp) {
-          alert(JSON.stringify(resp))
-          const columns = Object.keys(resp.Docs4Receiving[0])
+        if (resp && resp.status === 200) {
+          alert(JSON.stringify(resp.body))
+          const columns = Object.keys(resp.body.Docs4Receiving[0])
           try {
-            await resp.Docs4Receiving.forEach(async (element: any) => {
+            await resp.body.Docs4Receiving.forEach(async (element: any) => {
               if (element["Flag"] === 'D') {
                 await this.sqliteService.executeCustonQuery(`DELETE FROM ${docsForReceivingTableName} WHERE OrderLineId=? AND PoLineLocationId=? AND ShipmentLineId=?`, [element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);
               } else {
@@ -292,21 +245,22 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
           } catch (error) {
             console.log('error in performDeltaSync: ', error);
           }
+        } else if (resp && resp.status === 204) {
+          console.log('no docs for receiving in delta');
+          this.uiProviderService.presentToast('Success', 'No docs for receiving in delta');
         } else {
           console.log('error in performDeltaSync: ', resp);
         }
         }, error: (err) => {
           console.log('error in performDeltaSync: ', err);
+          alert('error in performDeltaSync: ' + JSON.stringify(err));
         }
       })
   }
 
   generateParams() {
     const orgId = this.selectedOrg.InventoryOrgId_PK
-    
-    // const formattedDate = formatDate(new Date(), "dd-MM-yyyy HH:mm:ss", "en-US")
     const formattedDate = this.authService.lastLoginDate
-  
     return `${orgId}/"${formattedDate}"/"N"`
    }
 
@@ -317,7 +271,7 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
       this.subInvCode = this.itemData[0].DefaultSubInventoryCode;
       this.locaCode = this.itemData[0].DefaultLocator;
       this.itemRevCode = this.itemData[0].ItemRevision;
-      this.qtyRecieved = this.itemData[0].QtyOrdered -
+      this.qtyRecieved = this.itemData[0].QtyOrdered;
       this.itemData[0].QtyRemaining;
       this.qtyRemaining = this.itemData[0].QtyRemaining;
     } catch {
@@ -391,7 +345,7 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
 
   }
 
-  generateGoodsRecpPayload(item: any) {
+  buildGoodsReceiptPayload(item: any) {
     const requestBody: any = {
       Input: {
         parts: [
@@ -504,6 +458,9 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
     }
     if (this.networkSubscription) {
       this.networkSubscription.unsubscribe();
+    }
+    if (this.docsForReceivingSubscription) {
+      this.docsForReceivingSubscription.unsubscribe();
     }
   }
 

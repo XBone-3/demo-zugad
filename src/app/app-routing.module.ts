@@ -55,10 +55,6 @@ const routes: Routes = [
     loadChildren: () => import('./trans-hist/trans-hist.module').then( m => m.TransHistPageModule)
   },
   {
-    path: 'sub-inventory',
-    loadChildren: () => import('./sub-inventory/sub-inventory.module').then( m => m.SubInventoryPageModule)
-  },
-  {
     path: 'common-shared-list-page',
     loadChildren: () => import('./common-shared-list-page/common-shared-list-page.module').then( m => m.CommonSharedListPagePageModule)
   },

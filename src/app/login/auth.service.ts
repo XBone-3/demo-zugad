@@ -13,7 +13,6 @@ import { formatDate } from '@angular/common';
 export class AuthService {
   isLoggedIn: boolean = false;
   columns: string[] | undefined;
-  isFirstTimeLogin: boolean = true;
   lastLoginDate: string = '';
 
 
@@ -51,7 +50,7 @@ export class AuthService {
     this.apiService.fetchLoginData(data).subscribe({next: async (res: any) => {
       if (res) {
         if (res?.token) {
-          this.apiService.setToken('token', res?.token); 
+          this.apiService.setToken('token', res.token); 
         }
 
         let metaData = res.metadata;
@@ -78,14 +77,6 @@ export class AuthService {
         } else {
           this.isLoggedIn = true;
           let resp = [];
-          try {
-            const user_name = await this.sqliteService.executeCustonQuery(`SELECT USERNAME FROM ${userDetailsTableName} WHERE USERNAME = '${data.username}'`)
-            if (user_name.rows.length > 0) {
-              this.isFirstTimeLogin = false;
-            }
-          } catch (error) {
-            console.log("could not get username from db: ", error);
-          }
 
           let default_org_id = "";
 
@@ -109,15 +100,6 @@ export class AuthService {
             
               let responsibility = (filteredLoginData[i].RESPONSIBILITY as string).toLowerCase().trim();
               resp.push(responsibility);
-              // try {
-              //   if (this.isFirstTimeLogin) {
-              //     let query = `INSERT INTO ${loginTableName} (${this.columns.join(',')}) VALUES (${this.columns.map((_) => '?')})`;
-              //     await this.sqliteService.insertData(query, Object.values(loginData[i]));
-              //   }
-              // } catch (error) {
-              //   console.log("could not insert data into sqlite: ", error);
-              // }
-              
               default_org_id = loginData[i].DEFAULT_ORG_ID;
           }
           
@@ -140,7 +122,8 @@ export class AuthService {
       }  
     }, error: (err) => {
       console.log('Login Failed', err);
-      this.uiProviderService.presentToast('Error', 'Login Failed');
+      this.uiProviderService.presentToast('Error', 'Login Service is down', 'danger');
+      this.uiProviderService.dismissLoading();
     }, complete: () => {
       this.uiProviderService.dismissLoading();
     }

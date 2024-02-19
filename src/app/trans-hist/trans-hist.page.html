@@ -11,6 +11,9 @@
 </ion-header>
 
 <ion-content [fullscreen]="true">
+  <ion-refresher slot="fixed" (ionRefresh)="onPullRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
   <ion-toolbar>
     <ion-card [color]="transaction.status === 'local'? 'light': transaction.status === 'S'? 'success': 'danger'" *ngFor="let transaction of transactionData">
       <ion-card-header>

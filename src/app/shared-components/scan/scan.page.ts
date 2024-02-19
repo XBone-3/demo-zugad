@@ -1,6 +1,5 @@
 import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core'
-// import { BarcodeScanner } from '@awesome-cordova-plugins/barcode-scanner/ngx';
-import { BarcodeScanner } from '@ionic-native/barcode-scanner/ngx';
+import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
 import { UiProviderService } from 'src/app/providers/ui-provider.service';
 
 @Component({
@@ -23,36 +22,27 @@ export class ScanPage implements OnInit {
   ngOnInit() { }
 
 
-  // async scan(): Promise<void> {
-  //   await BarcodeScanner.checkPermission({ force: true });
-  //   BarcodeScanner.hideBackground();
-  //   const result = await BarcodeScanner.startScan();
-  //   if (result.hasContent) {
-  //     this.sendScanValue.emit(result.content);
-  //   }
-  //   else {
-  //     this.uiProviderService.presentToast('Error', 'invalid barcode', 'danger');
-  //   }
-  // }
+  async scan(): Promise<void> {
+    await BarcodeScanner.checkPermission({ force: true });
+    BarcodeScanner.hideBackground();
+    const result = await BarcodeScanner.startScan();
+    if (result.hasContent) {
+      this.sendScanValue.emit(result.content);
+    }
+    else {
+      this.uiProviderService.presentToast('Error', 'invalid barcode', 'danger');
+    }
+  }
 
 
-  // stopScan() {
-  //   BarcodeScanner.showBackground();
-  //   BarcodeScanner.stopScan();
-  // }
+  stopScan() {
+    BarcodeScanner.showBackground();
+    BarcodeScanner.stopScan();
+  }
 
 
   updateFilteredOptions() {
     this.searchChange.emit(this.searchTerm);
-  }
-
-  toggleSearch() {
-    this.showSearch = !this.showSearch;
-    if (!this.showSearch) {
-      //this.searchTerm = '';
-
-    }
-    this.toggleClick.emit(this.showSearch);
   }
 
   clearSearch() {

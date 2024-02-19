@@ -9,7 +9,19 @@
   </ion-buttons>
   </ion-toolbar>
   <ion-toolbar>
-    <ion-searchbar show-clear-button="always" clear-icon="trash-bin" [(ngModel)]="searchText" (ionInput)="onSearch($event)" (ionChange)="onSearch($event)"></ion-searchbar>
+    <ion-buttons>
+      <ion-grid>
+        <ion-row>
+          <ion-col size="10">
+            <ion-searchbar show-clear-button="always" clear-icon="trash-bin" [(ngModel)]="searchText" (ionInput)="onSearch($event)" (ionChange)="onSearch($event)"></ion-searchbar>
+          </ion-col>
+          <ion-col size="2">
+            <app-scan class="make-sticky" [searchTerm]="searchText"
+                      (clearSearchChange)="clearSearch()" (sendScanValue)="scan($event)"></app-scan>
+          </ion-col>
+        </ion-row>
+      </ion-grid>
+  </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
