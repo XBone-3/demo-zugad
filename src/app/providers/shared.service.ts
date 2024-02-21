@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { SqliteService } from './sqlite.service';
 import { UiProviderService } from './ui-provider.service';
-import { transactionTableName } from '../CONSTANTS/CONSTANTS';
+import { TableNames, MESSAGES, RESPONSIBILITIES } from '../CONSTANTS/CONSTANTS';
 import { formatDate } from '@angular/common';
 import { NodeApiService } from './node-api.service';
 import { Subscription } from 'rxjs';
@@ -11,6 +11,7 @@ import { Subscription } from 'rxjs';
 })
 export class SharedService {
   MetaDataSubscription!: Subscription;
+  DataSubscription!: Subscription;
 
   constructor(
     private sqliteService: SqliteService,
@@ -20,37 +21,83 @@ export class SharedService {
   }
 
 
-  // async fetchTableMetaData( api: string, tableName: string, ) {
-  //   let success = true
-  //   const params = 'metadata'
-  //   this.MetaDataSubscription = this.apiService.fetchAllByUrl(api + params).subscribe({
-  //     next: async (resp: any) => {
-  //       if (resp && resp.status === 200) {
-  //         try {
-  //           await this.createMetaDataTable(resp.body, tableName)
-           
-  //         } catch (error) {
-  //           console.error(error)
-            
-  //           // this.uiProviderService.presentToast('Error', 'failed to create serials table', 'danger');
-  //         }
-  //       } else if (resp && resp.status === 204) {
-  //         success = false
-  //       } 
-  //       else {
-  //         console.log('No metadata available');
-  //         this.uiProviderService.presentToast('Error', 'No metadata available for serials', 'danger');
-  //       }
-  //     },
-  //     error: (error) => {
-  //       console.error(error)
-  //       this.uiProviderService.presentToast('Error', 'failed to gettable metadata', 'danger');
-  //       success = false
-  //     }
-  //   })
-  //   return success
-  // }
+  async fetchTableMetaData(api: string, tableName: string, params: string) {
+    let success = false
+    this.MetaDataSubscription = this.apiService.fetchAllByUrl(api + params).subscribe({
+      next: async (resp: any) => {
+        if (resp && resp.status === 200) {
+          try {
+            await this.createMetaDataTable(resp.body, tableName)
+            success = true
+          } catch (error) {
+            console.error(`error while creating table ${tableName}`, error);
+          }
+        } 
+        else {
+          this.uiProviderService.presentToast(MESSAGES.ERROR, `No metadata available for ${tableName}`, 'danger');
+        }
+      },
+      error: (error) => {
+        console.error(`error while fetching meta ${tableName}`, error)
+        this.uiProviderService.presentToast(MESSAGES.ERROR, 'failed to gettable metadata', 'danger');
+      }
+    })
+    return success
+  }
 
+  async fetchTableData(api: string, tableName: string, params: string) {
+    let success = false
+    this.DataSubscription = this.apiService.fetchAllByUrl(api + params).subscribe({
+      next: async (resp: any) => {
+        if (resp && resp.status === 200) {
+          try {
+            const data = this.getBodyFromResponse(resp, tableName)
+            if (tableName === TableNames.DOCS4RECEIVING || tableName === TableNames.LOCATORS) {
+              await this.insertDataToTableChunks(data, tableName)
+            } else if (tableName === TableNames.LOTS || tableName === TableNames.SERIALS) {
+              await this.insertDataToTableCSV(tableName, data)
+            } else {
+              await this.insertDataToTable(data, tableName)
+            }
+            success = true
+          } catch (error) {
+            console.error(`error while inserting ${tableName}`, error);
+          }
+        } else {
+          this.uiProviderService.presentToast(MESSAGES.ERROR, `No Data available for ${tableName}`, 'danger');
+        }
+        
+      }, error: (error) => {
+        console.error(`error while fetching data for ${tableName}`,error);
+        success = false
+      }
+    })
+    return success
+  }
+
+  getBodyFromResponse(response: any, tableName: string) {
+    if (tableName === RESPONSIBILITIES.GL_PERIODS) {
+      return response.body.GLPeriods
+    } else if (tableName === RESPONSIBILITIES.PURCHASING_PERIODS) {
+      return response.body.POPeriods
+    } else if (tableName === RESPONSIBILITIES.INVENTORY_PERIODS) {
+      return ''
+    } else if (tableName === RESPONSIBILITIES.GET_REASONS) {
+      return response.body.Reasons
+    } else if (tableName === RESPONSIBILITIES.SUB_INVENTORY) {
+      return response.body.ActiveSubInventories
+    } else if (tableName === RESPONSIBILITIES.LOCATORS) {
+      return response.body.ActiveLocators
+    } else if (tableName === RESPONSIBILITIES.DOCS4RECEIVING) {
+      return response.body.Docs4Receiving
+    } else if (tableName === RESPONSIBILITIES.UOM || tableName === RESPONSIBILITIES.REVISIONS) {
+      return response.body.Items
+    } else if (tableName === RESPONSIBILITIES.LOTS) {
+      return response.body
+    } else {
+      return response.body
+    }
+  }
 
   async createMetaDataTable(response: any, tableName: string) {
     let status;
@@ -62,7 +109,7 @@ export class SharedService {
       await this.sqliteService.createTable(fullQuery, tableName);
       status = true
     } catch (error) {
-      this.uiProviderService.presentToast('Error', 'failed to create ' + tableName + ' table', 'danger');
+      this.uiProviderService.presentToast(MESSAGES.ERROR, 'failed to create ' + tableName + ' table', 'danger');
       status = false
     }
     return status
@@ -176,7 +223,7 @@ export class SharedService {
 
   async generatePayloadsAll(selectedOrg: any, userDetails: any) {
     try {
-      const transactions = await this.sqliteService.getDataFromTable(transactionTableName);
+      const transactions = await this.sqliteService.getDataFromTable(TableNames.TRANSACTIONS);
       const successTransactions = transactions.filter(
         (transaction: any) => transaction.status === 'Local'
       );

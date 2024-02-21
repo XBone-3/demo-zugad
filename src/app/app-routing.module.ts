@@ -30,14 +30,6 @@ const routes: Routes = [
       {
         path: ':id',
         loadChildren: () => import('./dashboard/dashboard.module').then( m => m.DashboardPageModule)
-      },
-      {
-        path: 'records',
-        loadChildren: () => import('./dashboard/records/records.module').then( m => m.RecordsPageModule)
-      },
-      {
-        path: 'history',
-        loadChildren: () => import('./dashboard/history/history.module').then( m => m.HistoryPageModule)
       }
     ]
   },

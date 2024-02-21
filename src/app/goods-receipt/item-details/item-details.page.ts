@@ -7,8 +7,8 @@ import { AuthService } from 'src/app/login/auth.service';
 import { UiProviderService } from 'src/app/providers/ui-provider.service';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { transactionTableName, docsForReceivingTableName } from 'src/app/CONSTANTS/CONSTANTS';
-import { ApiSettings } from 'src/app/CONSTANTS/api-settings';
+import { TableNames } from 'src/app/CONSTANTS/CONSTANTS';
+import { ApiSettings } from 'src/app/CONSTANTS/CONSTANTS';
 import { NetworkService } from 'src/app/providers/network.service';
 import { SharedService } from 'src/app/providers/shared.service';
 import { CommonSharedListPage } from 'src/app/common-shared-list-page/common-shared-list-page.page';
@@ -142,7 +142,7 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
     const generatedPayload = this.buildGoodsReceiptPayload(this.item);
     this.uiProviderService.presentLoading('waiting for response...');
         if (this.hasNetwork) {
-          this.postitemSubscription = this.apiService.performPost(ApiSettings.createGoodsReceiptUrl, generatedPayload).subscribe({next: async (resp: any) => {
+          this.postitemSubscription = this.apiService.performPost(ApiSettings.CREATE_GOODS_RECEIPT, generatedPayload).subscribe({next: async (resp: any) => {
               const response = resp['Response']
               const transactionPayload = this.transactionObject();
               if (response[0].RecordStatus === 'S') {
@@ -157,7 +157,7 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
                 transactionPayload.error = response[0].Message;
                 this.uiProviderService.presentToast('Error', response[0].Message, 'danger');
               }
-              await this.sharedService.insertTransaction(transactionPayload, transactionTableName);
+              await this.sharedService.insertTransaction(transactionPayload, TableNames.TRANSACTIONS);
               await this.getDocsForReceivingPost();
             },
             error: (error) => {
@@ -170,7 +170,7 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
         } else {
           const offlinePayload = this.transactionObject();
 
-          await this.sharedService.insertTransaction(offlinePayload, transactionTableName);
+          await this.sharedService.insertTransaction(offlinePayload, TableNames.TRANSACTIONS);
           this.uiProviderService.presentToast('Success', 'Goods receipt saved offline');
           this.item.QtyRemaining = this.item.QtyRemaining - parseInt(this.QtyReceiving);
           this.item.QtyReceived = this.item.QtyReceived + parseInt(this.QtyReceiving);
@@ -222,7 +222,7 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
 
   async getDocsForReceivingPost() {
     const params = this.generateParams();
-    this.docsForReceivingSubscription = this.apiService.fetchAllByUrl(ApiSettings.Docs4ReceivingUrl + params).subscribe({
+    this.docsForReceivingSubscription = this.apiService.fetchAllByUrl(ApiSettings.DOCS4RECEIVING + params).subscribe({
       next: async (resp: any) => {
         if (resp && resp.status === 200) {
           alert(JSON.stringify(resp.body))
@@ -230,11 +230,11 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
           try {
             await resp.body.Docs4Receiving.forEach(async (element: any) => {
               if (element["Flag"] === 'D') {
-                await this.sqliteService.executeCustonQuery(`DELETE FROM ${docsForReceivingTableName} WHERE OrderLineId=? AND PoLineLocationId=? AND ShipmentLineId=?`, [element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);
+                await this.sqliteService.executeCustonQuery(`DELETE FROM ${TableNames.DOCS4RECEIVING} WHERE OrderLineId=? AND PoLineLocationId=? AND ShipmentLineId=?`, [element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);
               } else {
-                await this.sqliteService.insertData(`INSERT OR REPLACE INTO ${docsForReceivingTableName} (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`, Object.values(element));
+                await this.sqliteService.insertData(`INSERT OR REPLACE INTO ${TableNames.DOCS4RECEIVING} (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`, Object.values(element));
                 const updateQuery = `
-                  UPDATE ${docsForReceivingTableName} 
+                  UPDATE ${TableNames.DOCS4RECEIVING} 
                   SET QtyOrdered = ?, QtyReceived = ?, QtyRemaining = ?
                   WHERE OrderLineId = ?
                   AND PoLineLocationId = ?

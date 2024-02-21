@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { SqliteService } from '../providers/sqlite.service';
-import { docsForReceivingTableName, PoInterface } from '../CONSTANTS/CONSTANTS';
+import { TableNames } from '../CONSTANTS/CONSTANTS';
 import { NavController } from '@ionic/angular';
 import { NodeApiService } from '../providers/node-api.service';
 import { UiProviderService } from '../providers/ui-provider.service';
@@ -13,7 +13,7 @@ import { UiProviderService } from '../providers/ui-provider.service';
 })
 export class GoodsReceiptPage implements OnInit {
 
-  doc!: PoInterface;
+
   docsForReceiving: any[] = [];
   searchText: string = '';
   receipts: any[] = [];
@@ -33,7 +33,7 @@ export class GoodsReceiptPage implements OnInit {
   }
 
   async paginationData() {
-    const query = `SELECT * FROM ${docsForReceivingTableName} 
+    const query = `SELECT * FROM ${TableNames.DOCS4RECEIVING} 
     WHERE PoNumber IS NOT NULL 
     AND 
     PoHeaderId IS NOT NULL
@@ -62,7 +62,7 @@ export class GoodsReceiptPage implements OnInit {
 
   async scan(val: any) {
     if (val) {
-      const query = `SELECT * FROM ${docsForReceivingTableName} WHERE PoNumber LIKE '%${this.searchText}%' GROUP BY PoNumber`;
+      const query = `SELECT * FROM ${TableNames.DOCS4RECEIVING} WHERE PoNumber LIKE '%${this.searchText}%' GROUP BY PoNumber`;
       const data = await this.sqliteService.executeCustonQuery(query)
       if (data.rows.length > 0) {
         for (let i = 0; i < data.rows.length; i++) {
@@ -73,7 +73,8 @@ export class GoodsReceiptPage implements OnInit {
       } else {
         console.log('No data');
       }
-      
+    } else {
+      this.receipts = [...this.docsForReceiving]
     }
     
   }

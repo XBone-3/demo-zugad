@@ -7,8 +7,8 @@ import { NetworkService } from '../providers/network.service';
 import { UiProviderService } from '../providers/ui-provider.service';
 import { NodeApiService } from '../providers/node-api.service';
 import { SharedService } from '../providers/shared.service';
-import { docsForReceivingTableName, transactionTableName } from '../CONSTANTS/CONSTANTS';
-import { ApiSettings } from '../CONSTANTS/api-settings';
+import { TableNames, ApiSettings } from '../CONSTANTS/CONSTANTS';
+
 
 @Component({
   selector: 'app-trans-hist',
@@ -50,7 +50,7 @@ export class TransHistPage implements OnInit {
   }
 
   async getTransactionData() {
-    const data = await this.sqliteService.getDataFromTable(transactionTableName)
+    const data = await this.sqliteService.getDataFromTable(TableNames.TRANSACTIONS)
     if (data.rows.length > 0) {
       for (let i = 0; i < data.rows.length; i++) {
         this.transactionData.push(data.rows.item(i));
@@ -79,7 +79,7 @@ export class TransHistPage implements OnInit {
         this.uiProviderService.presentToast('Success', 'No data to sync', 'success');
         return
       }
-      this.postSubscription = this.apiService.performPostWithHeaders(ApiSettings.createGoodsReceiptUrl, batchPayload, this.getHeaders()).subscribe({
+      this.postSubscription = this.apiService.performPostWithHeaders(ApiSettings.CREATE_GOODS_RECEIPT, batchPayload, this.getHeaders()).subscribe({
         next: async (resp: any) => {
           console.log(resp);
           const response = resp['Response']
@@ -110,7 +110,7 @@ export class TransHistPage implements OnInit {
   async generatePayloadsAll() {
     try {
       const successTransactions: any[] = [];
-      const transactions = await this.sqliteService.getDataFromTable(transactionTableName);
+      const transactions = await this.sqliteService.getDataFromTable(TableNames.TRANSACTIONS);
       if (transactions.rows.length > 0) {
         for (let i = 0; i < transactions.rows.length; i++) {
           successTransactions.push(transactions.rows.item(i));
@@ -144,7 +144,7 @@ export class TransHistPage implements OnInit {
   }
 
   async updateTransaction(response: any, id: any) {
-    let query = `UPDATE ${transactionTableName}
+    let query = `UPDATE ${TableNames.TRANSACTIONS}
     SET receiptInfo=?, error=?, status=?
     WHERE id = ?;`;
     let payload = [
@@ -188,7 +188,7 @@ export class TransHistPage implements OnInit {
         this.transactionData.splice(index, 1);
 
         this.cdr.detectChanges();
-        await this.sqliteService.executeCustonQuery(`DELETE FROM ${transactionTableName} WHERE id = ?`, [id]);
+        await this.sqliteService.executeCustonQuery(`DELETE FROM ${TableNames.TRANSACTIONS} WHERE id = ?`, [id]);
         this.uiProviderService.presentToast('Success', 'Transaction deleted successfully');
         
       }
@@ -196,7 +196,7 @@ export class TransHistPage implements OnInit {
   async performDeltaSync() {
     const params = this.generateParams();
     // const params = `${this.selectedOrg.InventoryOrgId_PK}/""/""`;
-    this.docsForReceivingSubscription = this.apiService.fetchAllByUrl(ApiSettings.Docs4ReceivingUrl + params).subscribe({
+    this.docsForReceivingSubscription = this.apiService.fetchAllByUrl(ApiSettings.DOCS4RECEIVING + params).subscribe({
       next: async (resp: any) => {
         this.uiProviderService.presentToast('Success', 'transaction started', 'success');
         if (resp && resp.status === 200) {
@@ -204,11 +204,11 @@ export class TransHistPage implements OnInit {
           try {
             await resp.body.Docs4Receiving.forEach(async (element: any) => {
               if (element.Flag === 'D') {
-                await this.sqliteService.executeCustonQuery(`DELETE FROM ${docsForReceivingTableName} WHERE OrderLineId=? AND PoLineLocationId=? AND ShipmentLineId=?`, [element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);
+                await this.sqliteService.executeCustonQuery(`DELETE FROM ${TableNames.DOCS4RECEIVING} WHERE OrderLineId=? AND PoLineLocationId=? AND ShipmentLineId=?`, [element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);
               } else {
-                await this.sqliteService.insertData(`INSERT OR REPLACE INTO ${docsForReceivingTableName} (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`, Object.values(element));
+                await this.sqliteService.insertData(`INSERT OR REPLACE INTO ${TableNames.DOCS4RECEIVING} (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`, Object.values(element));
                 const updateQuery = `
-                  UPDATE ${docsForReceivingTableName} 
+                  UPDATE ${TableNames.DOCS4RECEIVING} 
                   SET QtyOrdered = ?, QtyReceived = ?, QtyRemaining = ?
                   WHERE OrderLineId = ?
                   AND PoLineLocationId = ?

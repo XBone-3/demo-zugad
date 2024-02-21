@@ -3,7 +3,7 @@ import { MenuController, NavController } from '@ionic/angular';
 import { NodeApiService } from '../providers/node-api.service';
 import { ActivatedRoute } from '@angular/router';
 import { SqliteService } from '../providers/sqlite.service';
-import { locationTableName, historyTableName, docsForReceivingTableName, transactionTableName } from '../CONSTANTS/CONSTANTS';
+import { TableNames } from '../CONSTANTS/CONSTANTS';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -63,30 +63,8 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   async ionViewDidEnter() {
-    // try {
-    //   const location_data  = await this.sqliteService.getDataFromTable(locationTableName)
-    //   if (location_data.rows.length > 0) {
-    //     this.totalRecords = location_data.rows.length;
-    //   } else {
-    //     this.totalRecords = '0';
-    //   }
-    // } catch (error) {
-    //   this.totalRecords = '0';
-    // }
-    
-    // try {
-    //   const history_data = await this.sqliteService.getDataFromTable(historyTableName)
-    //   if (history_data.rows.length > 0) {
-    //     this.totalHistory = history_data.rows.length;
-    //   } else {
-    //     this.totalHistory = '0';
-    //   }
-    // } catch (error) {
-    //   this.totalHistory = '0';
-    // }
-    
     try {
-      const trans_data = await this.sqliteService.getDataFromTable(transactionTableName)
+      const trans_data = await this.sqliteService.getDataFromTable(TableNames.TRANSACTIONS)
       if (trans_data.rows.length > 0) {
         this.totalTrans = trans_data.rows.length;
       } else {
@@ -96,7 +74,7 @@ export class DashboardPage implements OnInit, OnDestroy {
       this.totalTrans = '0';
     }
     
-    const query = `SELECT PoNumber, PoType, VendorName, LastUpdateDate FROM ${docsForReceivingTableName} 
+    const query = `SELECT PoNumber, PoType, VendorName, LastUpdateDate FROM ${TableNames.DOCS4RECEIVING} 
                     WHERE SourceTypeCode='PO' 
                     And 
                     PoNumber IS NOT NULL  

@@ -1,11 +1,11 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Storage } from '@ionic/storage-angular';
-import { ApiSettings } from '../CONSTANTS/api-settings';
+import { ApiSettings } from '../CONSTANTS/CONSTANTS';
 import { interval } from 'rxjs';
 import { SqliteService } from './sqlite.service';
 import { formatDate } from '@angular/common';
-import { docsForReceivingTableName } from '../CONSTANTS/CONSTANTS';
+import { TableNames } from '../CONSTANTS/CONSTANTS';
 import { AuthService } from '../login/auth.service';
 
 @Injectable({
@@ -44,21 +44,21 @@ export class NodeApiService {
    async performDeltaSync(intervalDuration: number) {
     interval(intervalDuration).subscribe(async () => {
       const params = this.generateParams();
-      this.fetchAllByUrl(ApiSettings.Docs4ReceivingUrl + params).subscribe({
+      this.fetchAllByUrl(ApiSettings.DOCS4RECEIVING + params).subscribe({
         next: async (resp: any) => {
           if (resp && resp.status === 200) {
             const columns = Object.keys(resp.body.Docs4Receiving[0])
           try {
-        //     await this.sqliteService.dropTable(docsForReceivingTableName);
-        // await this.createDocs4ReceivingTable(docsForReceivingTableName, columns);
+        //     await this.sqliteService.dropTable(TableNames.DOCS4RECEIVING);
+        // await this.createDocs4ReceivingTable(TableNames.DOCS4RECEIVING, columns);
 
             await resp.body.Docs4Receiving.forEach(async (element: any) => {
               if (element.Flag === 'D') {
-                await this.sqliteService.executeCustonQuery(`DELETE FROM ${docsForReceivingTableName} WHERE OrderLineId=? AND PoLineLocationId=? AND ShipmentLineId=?`, [element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);
+                await this.sqliteService.executeCustonQuery(`DELETE FROM ${TableNames.DOCS4RECEIVING} WHERE OrderLineId=? AND PoLineLocationId=? AND ShipmentLineId=?`, [element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);
               } else {
-                await this.sqliteService.insertData(`INSERT OR REPLACE INTO ${docsForReceivingTableName} (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`, Object.values(element));
+                await this.sqliteService.insertData(`INSERT OR REPLACE INTO ${TableNames.DOCS4RECEIVING} (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`, Object.values(element));
                 const updateQuery = `
-                  UPDATE ${docsForReceivingTableName} 
+                  UPDATE ${TableNames.DOCS4RECEIVING} 
                   SET QtyOrdered = ?, QtyReceived = ?, QtyRemaining = ?
                   WHERE OrderLineId = ?
                   AND PoLineLocationId = ?
@@ -126,11 +126,11 @@ export class NodeApiService {
    }
 
    fetchAllOrgTables() {
-     return this.http.get(ApiSettings.InventoryOrgUrl, {responseType: 'json'});
+     return this.http.get(ApiSettings.INVENTORY_ORG, {responseType: 'json'});
    }
 
    fetchAllOrgTableData(params: any) {
-     return this.http.get(`${ApiSettings.InventoryOrgTablesUrl}${params}`, {responseType: 'json'});
+     return this.http.get(`${ApiSettings.INVENTORY_ORG_TABLE}${params}`, {responseType: 'json'});
    }
 
    fetchAllByUrl(url: string) {

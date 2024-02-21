@@ -4,7 +4,7 @@ import { NavController } from '@ionic/angular';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import {
-  docsForReceivingTableName
+  TableNames
 } from 'src/app/CONSTANTS/CONSTANTS';
 import { NodeApiService } from 'src/app/providers/node-api.service';
 
@@ -20,6 +20,7 @@ export class ItemsPage implements OnInit, OnDestroy {
   Orders: any[] = []
   activatedRouteSub!: Subscription
   searchText: string = ''
+  numberOfItems: number = 0
 
   constructor(
     private sqliteService: SqliteService,
@@ -38,7 +39,7 @@ export class ItemsPage implements OnInit, OnDestroy {
   }
 
   async getPoFromDb() {
-    const query = `SELECT * FROM ${docsForReceivingTableName} 
+    const query = `SELECT * FROM ${TableNames.DOCS4RECEIVING} 
                     WHERE SourceTypeCode='PO' 
                     And 
                     PoNumber = '${this.doc.PoNumber}'
@@ -46,6 +47,7 @@ export class ItemsPage implements OnInit, OnDestroy {
     try {
       const data = await this.sqliteService.executeCustonQuery(query)
       if (data.rows.length > 0) {
+        this.numberOfItems = data.rows.length
         for (let i = 0; i < data.rows.length; i++) {
           this.docsForReceiving.push(data.rows.item(i));
         }
@@ -57,6 +59,19 @@ export class ItemsPage implements OnInit, OnDestroy {
       console.log("could not get data from docs for receiving: ", error);
     }
    
+  }
+
+  onScan(event: any) {
+    this.navCtrl.navigateForward('/goods-receipt/item-details', {
+      queryParams: {
+        item: event
+      }
+    });
+  }
+
+  onClearSearch(event: any) {
+    event.detail.value = "";
+    this.getPoFromDb();
   }
 
   onSearch(event: any) {

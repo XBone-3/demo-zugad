@@ -25,11 +25,11 @@ export class NetworkService {
     interval(intervalDuration).subscribe(async () => {
       const status = await Network.getStatus();
       if (status.connected) {
-        console.log('Online'); 
+        // console.log('Online'); 
         this.hasShownToast = false; 
         this.onlineStatusSubject.next(true);
       } else { 
-        console.log('Offline'); 
+        // console.log('Offline'); 
         if (!this.hasShownToast) { 
           this.uiProviderService.presentToast('Connection Status', 'Offline'); 
           this.hasShownToast = true; 

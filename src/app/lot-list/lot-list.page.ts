@@ -1,7 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { ModalController, NavParams } from '@ionic/angular';
 import { SharedService } from '../providers/shared.service';
-import { lotsTableName } from '../CONSTANTS/CONSTANTS';
+import { TableNames } from '../CONSTANTS/CONSTANTS';
 
 @Component({
   selector: 'app-lot-list',
@@ -30,7 +30,7 @@ export class LotListPage implements OnInit {
   async loadLotControlRecords() {
     this.itemNumber = this.recivedData[0];
     try {
-      this.lotList = await this.sharedService.getCustomTableData(lotsTableName, this.itemNumber);
+      this.lotList = await this.sharedService.getCustomTableData(TableNames.LOTS, this.itemNumber);
     } catch {
       console.error('Error fetching Lot Records');
     }

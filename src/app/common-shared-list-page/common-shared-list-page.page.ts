@@ -1,12 +1,7 @@
 import { Component, OnInit, ViewChild, Input, Output, EventEmitter, TemplateRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { IonModal, ModalController, NavParams, ToastController } from '@ionic/angular';
-import { locatorsTableName, lotsTableName,
-  serialsTableName,
-  subInventoryTableName,
-  uomTableName,
-  revisionTableName
- } from '../CONSTANTS/CONSTANTS';
+import { TableNames } from '../CONSTANTS/CONSTANTS';
  import { LotListPage } from '../lot-list/lot-list.page';
 import { SharedService } from '../providers/shared.service';
 import { NodeApiService } from '../providers/node-api.service';
@@ -113,7 +108,7 @@ export class CommonSharedListPage implements OnInit {
 
   async loadUomRecords() {
     try {
-      this.commonList = await this.sharedService.getTableData(uomTableName);
+      this.commonList = await this.sharedService.getTableData(TableNames.UOM);
     } catch {
       console.error('Error fetching Uom Records');
     }
@@ -121,7 +116,7 @@ export class CommonSharedListPage implements OnInit {
 
   async loadLotControlRecords() {
     try {
-      this.commonList = await this.sharedService.getCustomTableData(lotsTableName, this.receivedItemMsg[2]?.ItemNumber);
+      this.commonList = await this.sharedService.getCustomTableData(TableNames.LOTS, this.receivedItemMsg[2]?.ItemNumber);
     } catch {
       console.error('Error fetching Lot Records');
     }
@@ -149,7 +144,7 @@ export class CommonSharedListPage implements OnInit {
 
   async refreshSubInvRecords() {
     try {
-      let records = await this.sharedService.getTableData(subInventoryTableName);
+      let records = await this.sharedService.getTableData(TableNames.SUB_INVENTORY);
       this.commonList = records.filter(
         (val: any) => val.InventoryOrgId == this.defOrgId
       );
@@ -189,7 +184,7 @@ export class CommonSharedListPage implements OnInit {
 
   async refreshLocatorRecords() {
     try {
-      let locatorsList = await this.sharedService.getTableData(locatorsTableName);
+      let locatorsList = await this.sharedService.getTableData(TableNames.LOCATORS);
       this.commonList = locatorsList.filter(
         (val: any) => val.SubInventoryCode == this.receivedItemMsg[1]
       );
@@ -201,7 +196,7 @@ export class CommonSharedListPage implements OnInit {
 
   async loadSerialRecords() {
     try {
-      this.commonList = await this.sharedService.getCustomTableData(serialsTableName, this.receivedItemMsg[2]?.ItemNumber);
+      this.commonList = await this.sharedService.getCustomTableData(TableNames.SERIALS, this.receivedItemMsg[2]?.ItemNumber);
     } catch {
       console.error('Error fetching Serial Records');
     }
@@ -210,7 +205,7 @@ export class CommonSharedListPage implements OnInit {
 
   async loadRevisionsRecords() {
     try {
-      this.commonList = await this.sharedService.getCustomTableData(revisionTableName, this.receivedItemMsg[2]?.ItemNumber);
+      this.commonList = await this.sharedService.getCustomTableData(TableNames.REVISIONS, this.receivedItemMsg[2]?.ItemNumber);
     } catch {
       console.error('Error fetching Revision Records');
     }

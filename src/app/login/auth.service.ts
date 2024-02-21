@@ -3,8 +3,7 @@ import { UiProviderService } from '../providers/ui-provider.service';
 import { NodeApiService } from '../providers/node-api.service';
 import { NavController } from '@ionic/angular';
 import { SqliteService } from '../providers/sqlite.service';
-import { loginTableName } from '../CONSTANTS/CONSTANTS';
-import { userDetailsTableName } from '../CONSTANTS/CONSTANTS';
+import { TableNames } from '../CONSTANTS/CONSTANTS';
 import { formatDate } from '@angular/common';
 
 @Injectable({
@@ -58,14 +57,14 @@ export class AuthService {
        
           // Creation of user_details table
           await this.createUserTable();
-          // const loginTableName = "login_data";
-          let query = `CREATE TABLE IF NOT EXISTS ${loginTableName} (`; 
+          
+          let query = `CREATE TABLE IF NOT EXISTS ${TableNames.LOGIN} (`; 
             query += metaData
               .map((column: any) => `${column.name} ${this.mapToSql(column.type)}`)
               .join(', \n');
             query += ')';
           
-          await this.sqliteService.createTable(query, loginTableName); 
+          await this.sqliteService.createTable(query, TableNames.LOGIN); 
         
         // End of Creation of SQLite table
         
@@ -86,7 +85,7 @@ export class AuthService {
 
           
           try {
-              const baseQuery = `INSERT INTO ${loginTableName} (${this.columns.join(',')}) VALUES {}`;
+              const baseQuery = `INSERT INTO ${TableNames.LOGIN} (${this.columns.join(',')}) VALUES {}`;
             const valuesPlaceHolder = Array(filteredLoginData.length).fill(`(${this.columns.map((_) => '?').join(', ')})`).join(',');
             const fullQuery = baseQuery.replace('{}', valuesPlaceHolder);
             const flatData = filteredLoginData.flatMap((row: any) => Object.values(row));
@@ -133,12 +132,12 @@ export class AuthService {
   }
 
   async createUserTable() {
-    const query = `CREATE TABLE IF NOT EXISTS ${userDetailsTableName} ( username VARCHAR(255), password VARCHAR(255))`;
-    return this.sqliteService.createTable(query, userDetailsTableName);
+    const query = `CREATE TABLE IF NOT EXISTS ${TableNames.USERS} ( username VARCHAR(255), password VARCHAR(255))`;
+    return this.sqliteService.createTable(query, TableNames.USERS);
   }
 
   async saveLoginData(data: any) {
-    const query = `INSERT INTO ${userDetailsTableName} (username, password) VALUES (?, ?)`;
+    const query = `INSERT INTO ${TableNames.USERS} (username, password) VALUES (?, ?)`;
     return this.sqliteService.insertData(query, data);
   }
 

@@ -1,8 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { NavController } from '@ionic/angular';
 import { SqliteService } from '../providers/sqlite.service';
-import { SQLite } from '@ionic-native/sqlite/ngx';
-import { loginTableName } from '../CONSTANTS/CONSTANTS';
+import { TableNames } from '../CONSTANTS/CONSTANTS';
 
 @Component({
   selector: 'app-my-resp',
@@ -18,7 +17,7 @@ export class MyRespPage implements OnInit {
     private sqliteService: SqliteService
     // private sqlite: SQLite
   ) { 
-    this.sqliteService.getDataFromTable(loginTableName).then((data)=>{
+    this.sqliteService.getDataFromTable(TableNames.LOGIN).then((data)=>{
       if (data.rows.length > 0) {
         for (let i = 0; i < data.rows.length; i++) {
           this.loginTableData.push(data.rows.item(i));

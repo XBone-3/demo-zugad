@@ -62,9 +62,8 @@ export class SelectOrgPage implements OnInit, OnDestroy {
           this.organisations = [...this.orgList] 
         } 
       },
-        error: async (err) => {
-          await this.uiproviderService.presentToast('Error', 'Error while fetching data from server', "danger");
-          await this.uiproviderService.presentToast('Error', 'Pull from top to refresh', 'danger');
+        error: (_) => {
+          this.uiproviderService.presentToast('Error', 'Error while fetching data from server', "danger");
         },
         complete: () => {
           this.uiproviderService.dismissLoading();

@@ -7,6 +7,7 @@ import { IonicModule } from '@ionic/angular';
 import { ItemsPageRoutingModule } from './items-routing.module';
 
 import { ItemsPage } from './items.page';
+import { ScanPage } from 'src/app/shared-components/scan/scan.page';
 
 @NgModule({
   imports: [
@@ -15,6 +16,8 @@ import { ItemsPage } from './items.page';
     IonicModule,
     ItemsPageRoutingModule
   ],
-  declarations: [ItemsPage]
+  declarations: [
+    ItemsPage,
+  ]
 })
 export class ItemsPageModule {}

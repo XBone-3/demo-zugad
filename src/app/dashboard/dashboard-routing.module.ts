@@ -7,15 +7,7 @@ const routes: Routes = [
   {
     path: '',
     component: DashboardPage
-  },
-  {
-    path: 'records',
-    loadChildren: () => import('./records/records.module').then( m => m.RecordsPageModule)
-  },
-  {
-    path: 'history',
-    loadChildren: () => import('./history/history.module').then( m => m.HistoryPageModule)
-  },
+  }
 ];
 
 @NgModule({
