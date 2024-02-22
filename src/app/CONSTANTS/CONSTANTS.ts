@@ -37,6 +37,18 @@ export enum TableNames {
   REVISIONS = "REVISIONS",
 }
 
+export enum Color {
+  PRIMARY = "primary",
+  SECONDARY = "secondary",
+  TERTIARY = "tertiary",
+  SUCCESS = "success",
+  WARNING = "warning",
+  ERROR = "danger",
+  LIGHT = "light",
+  MEDIUM = "medium",
+  DARK = "dark",
+}
+
 export enum MESSAGES {
   SUCCESS = "Success",
   FAILED = "Failed",
@@ -44,6 +56,12 @@ export enum MESSAGES {
   UNAUTHORIZED = "Unauthorized",
   TIMEOUT = "Timeout",
   NO_INTERNET = "Please check your internet connection and try again.",
+}
+
+export enum StoredItemnames {
+  USER = "user",
+  SELECTED_ORG = 'selectedOrg',
+  DEFAULT_INV_ORG_ID = 'orgId'
 }
 
 export enum TypeOfApi {
@@ -57,7 +75,7 @@ export enum RESPONSIBILITIES {
   PURCHASING_PERIODS = "PURCHASING_PERIODS",
   INVENTORY_PERIODS = "INVENTORY_PERIODS",
   GET_REASONS = "GET_REASONS",
-  DOCS4RECEIVING = "GOODS RECEIPT",
+  DOCS4RECEIVING = "GOODS_RECEIPT",
   SUB_INVENTORY = "SUB_INVENTORY",
   LOCATORS = "LOCATORS",
   SERIALS = "SERIALS",

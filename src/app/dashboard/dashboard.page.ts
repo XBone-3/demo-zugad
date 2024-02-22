@@ -77,7 +77,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     const query = `SELECT PoNumber, PoType, VendorName, LastUpdateDate FROM ${TableNames.DOCS4RECEIVING} 
                     WHERE SourceTypeCode='PO' 
                     And 
-                    PoNumber IS NOT NULL  
+                    PoNumber IS NOT NULL
                     ORDER BY PoNumber`;
     try {
       const docs_4_rec_data = await this.sqliteService.executeCustonQuery(query)

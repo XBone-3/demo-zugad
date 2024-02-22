@@ -1,10 +1,11 @@
 import { Component, OnInit, ViewChild, Input, Output, EventEmitter, TemplateRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { IonModal, ModalController, NavParams, ToastController } from '@ionic/angular';
-import { TableNames } from '../CONSTANTS/CONSTANTS';
+import { Color, MESSAGES, TableNames } from '../CONSTANTS/CONSTANTS';
  import { LotListPage } from '../lot-list/lot-list.page';
 import { SharedService } from '../providers/shared.service';
 import { NodeApiService } from '../providers/node-api.service';
+import { UiProviderService } from '../providers/ui-provider.service';
 
 
 @Component({
@@ -29,20 +30,21 @@ export class CommonSharedListPage implements OnInit {
   @ViewChild('revisionTemplate') revisionTemplate!: TemplateRef<any>;
   @ViewChild('lotListTemplate') lotListTemplate!: TemplateRef<any>;
 
-  defOrgId: any;
+  selectedOrgId: any;
   serialNum: any = "";
   lotCode: string = "";
   sections: FormGroup[] = [];
   totalLotTypedQuantity: number = 0;
   maxTotalQuantity: number = 0;
   selectedOrg: any;
+  serialList: any[] = [];
 
   constructor(
     private modalController: ModalController,
     private navParams: NavParams,
     private sharedService: SharedService,
     private fb: FormBuilder,
-    private toastController: ToastController,
+    private uiProviderService: UiProviderService,
     private apiService: NodeApiService
   ) {
     this.receivedItemMsg = this.navParams.get('data');
@@ -51,7 +53,7 @@ export class CommonSharedListPage implements OnInit {
 
   async ngOnInit() {
     this.selectedOrg = await this.apiService.getValue('selectedOrg');
-    this.defOrgId = this.selectedOrg.InventoryOrgId_PK;
+    this.selectedOrgId = this.selectedOrg.InventoryOrgId_PK;
     const section = this.fb.group({
       lotQuantity: ['', [Validators.required, Validators.pattern(/^[1-9]\d*$/)]],
       lotCode: ['', Validators.required],
@@ -65,20 +67,39 @@ export class CommonSharedListPage implements OnInit {
   async getModalMsgData() {
     try {
       if (this.receivedItemMsg[0] == 'UOM') {
-        this.loadUomRecords();
+        // this.loadUomRecords();
+        try {
+          this.commonList = await this.sharedService.getTableData(TableNames.UOM);
+        } catch {
+          console.error('Error fetching Uom Records');
+        }
         this.templateIdentifier = this.uomTemplate;
       } else if (this.receivedItemMsg[0] == 'SUB-INV') {
-        this.loadSubInvRecords();
+        // this.loadSubInvRecords();
+        try {
+          this.subInvRecords();
+        } catch (error) {
+          console.error('Error fetching Sub Inv Records', error);
+        }
         this.templateIdentifier = this.subInvTemplate;
       } else if (this.receivedItemMsg[0] == 'LOCATOR') {
-        this.loadLocatRecords();
+        // this.loadLocatRecords();
+        try {
+          this.locatorRecords();
+        } catch {
+          console.error('Error fetching Locator Records');
+        }
         this.templateIdentifier = this.locTemplate;
       } else if (this.receivedItemMsg[0] == 'LOT-CONTROLLED') {
-        this.loadLotControlRecords();
+        // this.loadLotControlRecords();
+        try {
+          this.commonList = await this.sharedService.getCustomTableData(TableNames.LOTS, this.receivedItemMsg[2]?.ItemNumber);
+        } catch {
+          console.error('Error fetching Lot Records');
+        }
         this.templateIdentifier = this.lotTemplate;
         this.footerTemplateIdentifier = this.lotFooter;
         if (this.receivedItemMsg[5]) {
-          alert(JSON.stringify(this.receivedItemMsg[5]))
           this.sections.splice(0, 1)
           this.receivedItemMsg[5].forEach((lotItem: any) => {
             const section = this.fb.group({
@@ -90,7 +111,12 @@ export class CommonSharedListPage implements OnInit {
           });
         }
       } else if (this.receivedItemMsg[0] == 'SERIAL-CONTROLLED') {
-        this.loadSerialRecords();
+        // this.loadSerialRecords();
+        try {
+          this.commonList = await this.sharedService.getCustomTableData(TableNames.SERIALS, this.receivedItemMsg[2]?.ItemNumber);
+        } catch {
+          console.error('Error fetching Serial Records');
+        }
         this.templateIdentifier = this.serialTemplate;
         this.footerTemplateIdentifier = this.serialFooter;
         if (this.receivedItemMsg[4]) {
@@ -98,7 +124,12 @@ export class CommonSharedListPage implements OnInit {
         }
 
       } else if (this.receivedItemMsg[0] == 'REV') {
-        this.loadRevisionsRecords();
+        // this.loadRevisionsRecords();
+        try {
+          this.commonList = await this.sharedService.getCustomTableData(TableNames.REVISIONS, this.receivedItemMsg[2]?.ItemNumber);
+        } catch {
+          console.error('Error fetching Revision Records');
+        }
         this.templateIdentifier = this.revisionTemplate;
       }
     } catch {
@@ -106,29 +137,29 @@ export class CommonSharedListPage implements OnInit {
     }
   }
 
-  async loadUomRecords() {
-    try {
-      this.commonList = await this.sharedService.getTableData(TableNames.UOM);
-    } catch {
-      console.error('Error fetching Uom Records');
-    }
-  }
+  // async loadUomRecords() {
+  //   try {
+  //     this.commonList = await this.sharedService.getTableData(TableNames.UOM);
+  //   } catch {
+  //     console.error('Error fetching Uom Records');
+  //   }
+  // }
 
-  async loadLotControlRecords() {
-    try {
-      this.commonList = await this.sharedService.getCustomTableData(TableNames.LOTS, this.receivedItemMsg[2]?.ItemNumber);
-    } catch {
-      console.error('Error fetching Lot Records');
-    }
-  }
+  // async loadLotControlRecords() {
+  //   try {
+  //     this.commonList = await this.sharedService.getCustomTableData(TableNames.LOTS, this.receivedItemMsg[2]?.ItemNumber);
+  //   } catch {
+  //     console.error('Error fetching Lot Records');
+  //   }
+  // }
 
-  async loadSubInvRecords() {
-    try {
-      this.refreshSubInvRecords(); // Load all records initially
-    } catch (error) {
-      console.error('Error fetching Sub Inv Records', error);
-    }
-  }
+  // async loadSubInvRecords() {
+  //   try {
+  //     this.subInvRecords(); // Load all records initially
+  //   } catch (error) {
+  //     console.error('Error fetching Sub Inv Records', error);
+  //   }
+  // }
 
   onSearch(event: any) {
     const searchTerm = event.detail.value;
@@ -138,15 +169,15 @@ export class CommonSharedListPage implements OnInit {
         val.SubInventoryDesc.toLowerCase().includes(searchTerm.toLowerCase())
       );
     } else {
-      this.refreshSubInvRecords();
+      this.subInvRecords();
     }
   }
 
-  async refreshSubInvRecords() {
+  async subInvRecords() {
     try {
       let records = await this.sharedService.getTableData(TableNames.SUB_INVENTORY);
       this.commonList = records.filter(
-        (val: any) => val.InventoryOrgId == this.defOrgId
+        (val: any) => val.InventoryOrgId == this.selectedOrgId
       );
     } catch (error) {
       console.error('Error fetching Sub Inv Records', error);
@@ -155,21 +186,21 @@ export class CommonSharedListPage implements OnInit {
 
   onClearSearch(event: any) {
     event.detail.value = "";
-    this.refreshSubInvRecords();
+    this.subInvRecords();
   }
 
   onClearLocSearch(event: any) {
     event.detail.value = "";
-    this.refreshLocatorRecords();
+    this.locatorRecords();
   }
 
-  async loadLocatRecords() {
-    try {
-      this.refreshLocatorRecords();
-    } catch {
-      console.error('Error fetching Locator Records');
-    }
-  }
+  // async loadLocatRecords() {
+  //   try {
+  //     this.locatorRecords();
+  //   } catch {
+  //     console.error('Error fetching Locator Records');
+  //   }
+  // }
 
   onSearchLoc(event: any) {
     const searchTerm = event.detail.value;
@@ -178,11 +209,11 @@ export class CommonSharedListPage implements OnInit {
         val.Locator.toLowerCase().includes(searchTerm.toLowerCase())
       );
     } else {
-      this.refreshLocatorRecords();
+      this.locatorRecords();
     }
   }
 
-  async refreshLocatorRecords() {
+  async locatorRecords() {
     try {
       let locatorsList = await this.sharedService.getTableData(TableNames.LOCATORS);
       this.commonList = locatorsList.filter(
@@ -194,22 +225,22 @@ export class CommonSharedListPage implements OnInit {
   }
 
 
-  async loadSerialRecords() {
-    try {
-      this.commonList = await this.sharedService.getCustomTableData(TableNames.SERIALS, this.receivedItemMsg[2]?.ItemNumber);
-    } catch {
-      console.error('Error fetching Serial Records');
-    }
-  }
+  // async loadSerialRecords() {
+  //   try {
+  //     this.commonList = await this.sharedService.getCustomTableData(TableNames.SERIALS, this.receivedItemMsg[2]?.ItemNumber);
+  //   } catch {
+  //     console.error('Error fetching Serial Records');
+  //   }
+  // }
 
 
-  async loadRevisionsRecords() {
-    try {
-      this.commonList = await this.sharedService.getCustomTableData(TableNames.REVISIONS, this.receivedItemMsg[2]?.ItemNumber);
-    } catch {
-      console.error('Error fetching Revision Records');
-    }
-  }
+  // async loadRevisionsRecords() {
+  //   try {
+  //     this.commonList = await this.sharedService.getCustomTableData(TableNames.REVISIONS, this.receivedItemMsg[2]?.ItemNumber);
+  //   } catch {
+  //     console.error('Error fetching Revision Records');
+  //   }
+  // }
   onModalClose(data: any) {
     if (this.receivedItemMsg[0] == "LOT") {
       if (this.totalLotTypedQuantity != this.maxTotalQuantity) {
@@ -230,7 +261,7 @@ export class CommonSharedListPage implements OnInit {
 
   }
 
-  serialList: any[] = [];
+  
   onSerialSelect(event: any) {
     let serFilter = this.commonList.filter((val: any) => val.SerialNumber === this.serialNum);
     if (serFilter.length > 0) {
@@ -240,14 +271,14 @@ export class CommonSharedListPage implements OnInit {
           this.serialList.push(serialToAdd?.SerialNumber);
           this.serialNum = "";
         } else {
-          this.showToastMsg(`Total Quanity should not exceed ${this.receivedItemMsg[3]}`, 'danger');
+          this.uiProviderService.presentToast(MESSAGES.ERROR, `Total Quanity should not exceed ${this.receivedItemMsg[3]}`, Color.ERROR);
         }
       } else {
-        this.showToastMsg('Serial number is already used', 'danger');
+        this.uiProviderService.presentToast(MESSAGES.ERROR,'Serial number is already used', Color.ERROR);
       }
     }
     else {
-      //this.showToastMsg(`Invalid Serial Number`, 'danger');
+      
     }
   }
 
@@ -279,9 +310,6 @@ export class CommonSharedListPage implements OnInit {
     this.modalController.dismiss();
   }
 
-  // logOut() {
-  //   this.commonService.showLogoutConfirmation();
-  // }
 
   addSection() {
     if (this.totalLotTypedQuantity < this.maxTotalQuantity) {
@@ -294,10 +322,10 @@ export class CommonSharedListPage implements OnInit {
         this.sections.push(newSection);
         this.updateTotalQuantity();
       } else {
-        this.showToastMsg('Please fill both Quantity and lot number.', 'danger');
+        this.uiProviderService.presentToast(MESSAGES.ERROR, 'Please fill both Quantity and lot number.', Color.ERROR);
       }
     } else {
-      this.showToastMsg(`Total quantity should be ${this.receivedItemMsg[3]}.`, 'danger');
+      this.uiProviderService.presentToast(MESSAGES.ERROR, `Total quantity should be ${this.receivedItemMsg[3]}.`, Color.ERROR);
     }
   }
 
@@ -319,16 +347,6 @@ export class CommonSharedListPage implements OnInit {
       const lotQuantity = section.get('lotQuantity')?.value || 0;
       return sum + +lotQuantity;
     }, 0);
-  }
-
-  async showToastMsg(message: string, status: string) {
-    const toast = await this.toastController.create({
-      message: message,
-      duration: 2000,
-      position: 'top',
-      color: status
-    });
-    toast.present();
   }
 
 }

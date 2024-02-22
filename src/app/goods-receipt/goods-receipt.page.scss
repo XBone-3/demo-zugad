@@ -1,0 +1,9 @@
+body.scanner-active {
+    --background: transparent;
+    --ion-background-color: transparent;
+  }
+  
+  ion-app, ion-content, ion-page, .ion-page, .app-root, .example-viewport,ion-card,ng-container {
+    --background: transparent !important;
+    background-color: transparent !important;
+  }

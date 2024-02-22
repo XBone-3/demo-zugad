@@ -7,7 +7,7 @@ import { AuthService } from 'src/app/login/auth.service';
 import { UiProviderService } from 'src/app/providers/ui-provider.service';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
-import { TableNames } from 'src/app/CONSTANTS/CONSTANTS';
+import { Color, MESSAGES, TableNames } from 'src/app/CONSTANTS/CONSTANTS';
 import { ApiSettings } from 'src/app/CONSTANTS/CONSTANTS';
 import { NetworkService } from 'src/app/providers/network.service';
 import { SharedService } from 'src/app/providers/shared.service';
@@ -97,30 +97,30 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
 
   UpdateQty() {
     if (this.QtyReceiving <= 0) {
-      this.uiProviderService.presentToast('Error', 'Receipt Quantity can not be zero or empty', "danger");
+      this.uiProviderService.presentToast(MESSAGES.ERROR, 'Receipt Quantity can not be zero or empty', Color.ERROR);
       throw new Error;
     }
     else {
       if (this.item.DestinationType == "Inventory") {
         if (this.subInvCode == "" || this.subInvCode == null) {
-          this.uiProviderService.presentToast('Error', 'Please select Sub Inventory Code', "danger");
+          this.uiProviderService.presentToast(MESSAGES.ERROR, 'Please select Sub Inventory Code', Color.ERROR);
           throw new Error;
         }
         else if (this.locaCode == "" || this.locaCode == null) {
-          this.uiProviderService.presentToast('Error', 'Please select Locator Code', "danger");
+          this.uiProviderService.presentToast(MESSAGES.ERROR, 'Please select Locator Code', Color.ERROR);
           throw new Error;
         }
       }
 
       if (this.item.IsSerialControlled == "True") {
         if (this.SerialData.length == 0) {
-          this.uiProviderService.presentToast('Error', 'Please select Serial Number', 'danger');
+          this.uiProviderService.presentToast(MESSAGES.ERROR, 'Please select Serial Number', Color.ERROR);
           throw new Error;
         }
       }
       else if (this.item.IsLotControlled == "True") {
         if (this.lotData.length == 0) {
-          this.uiProviderService.presentToast('Error','Please select Lot Number', 'danger');
+          this.uiProviderService.presentToast(MESSAGES.ERROR,'Please select Lot Number', Color.ERROR);
           throw new Error;
         }
       }
@@ -130,48 +130,49 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
     if (this.QtyReceiving <= this.item.QtyRemaining) {
       this.postTransaction();
     } else {
-      this.uiProviderService.presentToast('Error', 'QTY Tolerance is Exceeding', 'danger');
+      this.uiProviderService.presentToast(MESSAGES.ERROR, 'QTY Tolerance is Exceeding', Color.ERROR);
     }
   }
 
   async postTransaction() {
     if (!this.QtyReceiving) {
-      this.uiProviderService.presentToast('error','Please enter quantity receiving');
+      this.uiProviderService.presentToast(MESSAGES.ERROR,'Please enter quantity receiving');
       return;
     }
     const generatedPayload = this.buildGoodsReceiptPayload(this.item);
+    let transactionPayload = this.transactionObject();
     this.uiProviderService.presentLoading('waiting for response...');
         if (this.hasNetwork) {
           this.postitemSubscription = this.apiService.performPost(ApiSettings.CREATE_GOODS_RECEIPT, generatedPayload).subscribe({next: async (resp: any) => {
               const response = resp['Response']
-              const transactionPayload = this.transactionObject();
+              
               if (response[0].RecordStatus === 'S') {
                 transactionPayload.status = response[0].RecordStatus;
                 transactionPayload.receiptInfo = response[0].ReceiptNumber;
                 
-                this.uiProviderService.presentToast('Success', 'Goods receipt created successfully');
+                this.uiProviderService.presentToast(MESSAGES.SUCCESS, 'Goods receipt created successfully');
                 this.item.QtyRemaining = this.item.QtyRemaining - parseInt(this.QtyReceiving);
                 this.item.QtyReceived = this.item.QtyReceived + parseInt(this.QtyReceiving);
               } else {
                 transactionPayload.status = response[0].RecordStatus;
                 transactionPayload.error = response[0].Message;
-                this.uiProviderService.presentToast('Error', response[0].Message, 'danger');
+                this.uiProviderService.presentToast(MESSAGES.ERROR, response[0].Message, Color.ERROR);
               }
-              await this.sharedService.insertTransaction(transactionPayload, TableNames.TRANSACTIONS);
+              
               await this.getDocsForReceivingPost();
             },
             error: (error) => {
-              console.log("error while performing post transaction: ",error)
+              console.error("error while performing post transaction: ", error)
             },
-            complete: () => {
+            complete: async () => {
+              await this.sharedService.insertTransaction(transactionPayload, TableNames.TRANSACTIONS);
               this.uiProviderService.dismissLoading();
             }
           })
         } else {
-          const offlinePayload = this.transactionObject();
-
-          await this.sharedService.insertTransaction(offlinePayload, TableNames.TRANSACTIONS);
-          this.uiProviderService.presentToast('Success', 'Goods receipt saved offline');
+          // const offlinePayload = this.transactionObject();
+          await this.sharedService.insertTransaction(transactionPayload, TableNames.TRANSACTIONS);
+          this.uiProviderService.presentToast(MESSAGES.SUCCESS, 'Goods receipt saved offline');
           this.item.QtyRemaining = this.item.QtyRemaining - parseInt(this.QtyReceiving);
           this.item.QtyReceived = this.item.QtyReceived + parseInt(this.QtyReceiving);
           this.uiProviderService.dismissLoading();
@@ -247,7 +248,7 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
           }
         } else if (resp && resp.status === 204) {
           console.log('no docs for receiving in delta');
-          this.uiProviderService.presentToast('Success', 'No docs for receiving in delta');
+          this.uiProviderService.presentToast(MESSAGES.SUCCESS, 'No docs for receiving in delta');
         } else {
           console.log('error in performDeltaSync: ', resp);
         }
@@ -274,15 +275,15 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
       this.qtyRecieved = this.itemData[0].QtyOrdered;
       this.itemData[0].QtyRemaining;
       this.qtyRemaining = this.itemData[0].QtyRemaining;
-    } catch {
-      console.log('Error loading data');
+    } catch (error) {
+      console.error('Error loading data', error);
     }
   }
    async goToCommonListPage(message: string) {
     let modalData: any[] = [message, this.subInvCode, this.item, this.QtyReceiving, this.SerialData, this.convertedLotData];
 
     if ((message == 'SERIAL-CONTROLLED' || message == 'LOT-CONTROLLED') && this.QtyReceiving <= 0) {
-      this.uiProviderService.presentToast('Error', 'Please enter quantity first', 'danger');
+      this.uiProviderService.presentToast(MESSAGES.ERROR, 'Please enter quantity first', Color.ERROR);
       return;
     }
 
@@ -291,30 +292,30 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
       componentProps: { data: modalData },
     });
 
-    modal.onDidDismiss().then((dataReturned: any) => {
-      if (dataReturned.data) {
-        let val = dataReturned.data;
+    modal.onDidDismiss().then((capturedData: any) => {
+      if (capturedData.data) {
+        let receivedData = capturedData.data;
         switch (message) {
           case 'UOM':
-            this.uomCode = val.data;
+            this.uomCode = receivedData.data;
             break;
           case 'SUB-INV':
-            this.subInvCode = val.data;
+            this.subInvCode = receivedData.data;
             break;
           case 'LOCATOR':
-            this.locaCode = val.data;
+            this.locaCode = receivedData.data;
             break;
           case 'LOT-CONTROLLED':
-            this.lotData = val.data;
+            this.lotData = receivedData.data;
             if (this.lotData.length > 0) {
               this.buildLotData();
             }
             break;
           case 'SERIAL-CONTROLLED':
-            this.SerialData = val.data;
+            this.SerialData = receivedData.data;
             break;
           case 'REV':
-            this.itemRevCode = val.data;
+            this.itemRevCode = receivedData.data;
             break;
         }
       }

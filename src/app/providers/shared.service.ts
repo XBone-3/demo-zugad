@@ -1,10 +1,11 @@
 import { Injectable } from '@angular/core';
 import { SqliteService } from './sqlite.service';
 import { UiProviderService } from './ui-provider.service';
-import { TableNames, MESSAGES, RESPONSIBILITIES } from '../CONSTANTS/CONSTANTS';
+import { TableNames, MESSAGES, RESPONSIBILITIES, Color } from '../CONSTANTS/CONSTANTS';
 import { formatDate } from '@angular/common';
 import { NodeApiService } from './node-api.service';
 import { Subscription } from 'rxjs';
+import { AuthService } from '../login/auth.service';
 
 @Injectable({
   providedIn: 'root'
@@ -16,12 +17,14 @@ export class SharedService {
   constructor(
     private sqliteService: SqliteService,
     private uiProviderService: UiProviderService,
-    private apiService: NodeApiService
+    private apiService: NodeApiService,
+    private authService: AuthService
   ) {
+    
   }
+  
 
-
-  async fetchTableMetaData(api: string, tableName: string, params: string) {
+  async fetchTableMetaData(api: string, tableName: string, params: string): Promise<boolean> {
     let success = false
     this.MetaDataSubscription = this.apiService.fetchAllByUrl(api + params).subscribe({
       next: async (resp: any) => {
@@ -34,18 +37,18 @@ export class SharedService {
           }
         } 
         else {
-          this.uiProviderService.presentToast(MESSAGES.ERROR, `No metadata available for ${tableName}`, 'danger');
+          this.uiProviderService.presentToast(MESSAGES.ERROR, `No metadata available for ${tableName}`, Color.ERROR);
         }
       },
       error: (error) => {
         console.error(`error while fetching meta ${tableName}`, error)
-        this.uiProviderService.presentToast(MESSAGES.ERROR, 'failed to gettable metadata', 'danger');
+        this.uiProviderService.presentToast(MESSAGES.ERROR, 'failed to gettable metadata', Color.ERROR);
       }
     })
     return success
   }
 
-  async fetchTableData(api: string, tableName: string, params: string) {
+  async fetchTableData(api: string, tableName: string, params: string): Promise<boolean> {
     let success = false
     this.DataSubscription = this.apiService.fetchAllByUrl(api + params).subscribe({
       next: async (resp: any) => {
@@ -55,6 +58,7 @@ export class SharedService {
             if (tableName === TableNames.DOCS4RECEIVING || tableName === TableNames.LOCATORS) {
               await this.insertDataToTableChunks(data, tableName)
             } else if (tableName === TableNames.LOTS || tableName === TableNames.SERIALS) {
+              await this.createTableDataCSV(tableName, data)
               await this.insertDataToTableCSV(tableName, data)
             } else {
               await this.insertDataToTable(data, tableName)
@@ -64,7 +68,7 @@ export class SharedService {
             console.error(`error while inserting ${tableName}`, error);
           }
         } else {
-          this.uiProviderService.presentToast(MESSAGES.ERROR, `No Data available for ${tableName}`, 'danger');
+          this.uiProviderService.presentToast(MESSAGES.ERROR, `No Data available for ${tableName}`, Color.ERROR);
         }
         
       }, error: (error) => {
@@ -76,23 +80,23 @@ export class SharedService {
   }
 
   getBodyFromResponse(response: any, tableName: string) {
-    if (tableName === RESPONSIBILITIES.GL_PERIODS) {
+    if (tableName === TableNames.GL_PERIODS) {
       return response.body.GLPeriods
-    } else if (tableName === RESPONSIBILITIES.PURCHASING_PERIODS) {
+    } else if (tableName === TableNames.PURCHASING_PERIODS) {
       return response.body.POPeriods
-    } else if (tableName === RESPONSIBILITIES.INVENTORY_PERIODS) {
+    } else if (tableName === TableNames.INVENTORY_PERIODS) {
       return ''
-    } else if (tableName === RESPONSIBILITIES.GET_REASONS) {
+    } else if (tableName === TableNames.GET_REASONS) {
       return response.body.Reasons
-    } else if (tableName === RESPONSIBILITIES.SUB_INVENTORY) {
+    } else if (tableName === TableNames.SUB_INVENTORY) {
       return response.body.ActiveSubInventories
-    } else if (tableName === RESPONSIBILITIES.LOCATORS) {
+    } else if (tableName === TableNames.LOCATORS) {
       return response.body.ActiveLocators
-    } else if (tableName === RESPONSIBILITIES.DOCS4RECEIVING) {
+    } else if (tableName === TableNames.DOCS4RECEIVING) {
       return response.body.Docs4Receiving
-    } else if (tableName === RESPONSIBILITIES.UOM || tableName === RESPONSIBILITIES.REVISIONS) {
+    } else if (tableName === TableNames.UOM || tableName === TableNames.REVISIONS) {
       return response.body.Items
-    } else if (tableName === RESPONSIBILITIES.LOTS) {
+    } else if (tableName === TableNames.LOTS) {
       return response.body
     } else {
       return response.body
@@ -109,7 +113,7 @@ export class SharedService {
       await this.sqliteService.createTable(fullQuery, tableName);
       status = true
     } catch (error) {
-      this.uiProviderService.presentToast(MESSAGES.ERROR, 'failed to create ' + tableName + ' table', 'danger');
+      this.uiProviderService.presentToast(MESSAGES.ERROR, 'failed to create ' + tableName + ' table', Color.ERROR);
       status = false
     }
     return status
@@ -172,6 +176,46 @@ export class SharedService {
     }
   }
 
+  async createTransactionHistoryTable(table_name: string) {
+    let createTransactionHistoryTableQuery = `CREATE TABLE IF NOT EXISTS ${table_name} (
+      id INTEGER PRIMARY KEY AUTOINCREMENT ,
+      poNumber TEXT,
+      titleName TEXT,
+      syncStatus DATETIME,
+      createdTime DATETIME,
+      quantityReceived INTEGER,
+      receiptInfo TEXT,
+      error TEXT,
+      status TEXT,
+      shipLaneNum TEXT,
+      vendorId TEXT,
+      unitOfMeasure TEXT,
+      poHeaderId TEXT,
+      poLineLocationId TEXT,
+      poLineId TEXT,
+      poDistributionId TEXT,
+      destinationTypeCode TEXT,
+      itemNumber TEXT,
+      Subinventory TEXT,
+      Locator TEXT,
+      ShipmentNumber TEXT,
+      LpnNumber TEXT,
+      OrderLineId TEXT,
+      SoldtoLegalEntity TEXT,
+      SecondaryUnitOfMeasure TEXT,
+      ShipmentHeaderId TEXT,
+      ItemRevision TEXT,
+      ReceiptSourceCode TEXT,
+      MobileTransactionId TEXT,
+      TransactionType TEXT,
+      AutoTransactCode TEXT,
+      OrganizationCode TEXT,
+      serialNumbers TEXT,
+      lotQuantity TEXT,
+      lotCode TEXT
+      )`
+    await this.sqliteService.createTable(createTransactionHistoryTableQuery, table_name);
+  }
 
 
   insertTransaction(item: any, tableName: string) {
@@ -505,6 +549,50 @@ export class SharedService {
   //   return [];
 
   // }
+
+  getTableName(name: string) {
+    if (name === RESPONSIBILITIES.GL_PERIODS) {
+      return TableNames.GL_PERIODS
+    } else if (name === RESPONSIBILITIES.PURCHASING_PERIODS) {
+      return TableNames.PURCHASING_PERIODS
+    } else if (name === RESPONSIBILITIES.INVENTORY_PERIODS) {
+      return TableNames.INVENTORY_PERIODS
+    } else if (name === RESPONSIBILITIES.GET_REASONS) {
+      return TableNames.GET_REASONS
+    }else if (name === RESPONSIBILITIES.REVISIONS) {
+      return TableNames.REVISIONS
+    } else if (name === RESPONSIBILITIES.SUB_INVENTORY) {
+      return TableNames.SUB_INVENTORY
+    } else if (name === RESPONSIBILITIES.LOCATORS) {
+      return TableNames.LOCATORS
+    } else if (name === RESPONSIBILITIES.DOCS4RECEIVING) {
+      return TableNames.DOCS4RECEIVING
+    } else if (name === RESPONSIBILITIES.UOM) {
+      return TableNames.UOM
+    } else if (name === RESPONSIBILITIES.LOTS) {
+      return TableNames.LOTS
+    } else {
+      return TableNames.SERIALS
+    }
+  }
+
+  generateParams(name: string, defaultOrgId: any, organisation: any) {
+    if (name === RESPONSIBILITIES.GL_PERIODS || name === RESPONSIBILITIES.INVENTORY_PERIODS || name === RESPONSIBILITIES.PURCHASING_PERIODS) {
+      return `${defaultOrgId}`
+    } else if (name === RESPONSIBILITIES.REVISIONS || name === RESPONSIBILITIES.UOM || name === RESPONSIBILITIES.LOTS) {
+      return `${organisation.InventoryOrgId_PK}/""` 
+    } else if (name === RESPONSIBILITIES.SUB_INVENTORY || name === RESPONSIBILITIES.DOCS4RECEIVING) {
+      return `${organisation.InventoryOrgId_PK}/${this.authService.lastLoginDate}/"Y"`
+    } else if (name === RESPONSIBILITIES.LOCATORS) {
+      return `${organisation.InventoryOrgId_PK}/${this.authService.lastLoginDate}/""`
+    } else if (name === RESPONSIBILITIES.SERIALS) {
+      return `${organisation.InventoryOrgId_PK}/""/""/""`
+    } else {
+      return ''
+    }
+  }
+
+  
 
   mapTypeToSql(type: string) {
     switch (type) {

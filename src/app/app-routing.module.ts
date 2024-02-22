@@ -34,10 +34,6 @@ const routes: Routes = [
     ]
   },
   {
-    path: 'my-resp',
-    loadChildren: () => import('./my-resp/my-resp.module').then( m => m.MyRespPageModule)
-  },
-  {
     path: 'goods-receipt',
     loadChildren: () => import('./goods-receipt/goods-receipt.module').then( m => m.GoodsReceiptPageModule)
 

@@ -7,7 +7,7 @@ import { NetworkService } from '../providers/network.service';
 import { UiProviderService } from '../providers/ui-provider.service';
 import { NodeApiService } from '../providers/node-api.service';
 import { SharedService } from '../providers/shared.service';
-import { TableNames, ApiSettings } from '../CONSTANTS/CONSTANTS';
+import { TableNames, ApiSettings, MESSAGES, Color } from '../CONSTANTS/CONSTANTS';
 
 
 @Component({
@@ -76,7 +76,7 @@ export class TransHistPage implements OnInit {
       const batchPayload = await this.generatePayloadsAll();
       console.log('batch payload', batchPayload)
       if (batchPayload === null) {
-        this.uiProviderService.presentToast('Success', 'No data to sync', 'success');
+        this.uiProviderService.presentToast(MESSAGES.SUCCESS, 'No data to sync', Color.SUCCESS);
         return
       }
       this.postSubscription = this.apiService.performPostWithHeaders(ApiSettings.CREATE_GOODS_RECEIPT, batchPayload, this.getHeaders()).subscribe({
@@ -91,11 +91,11 @@ export class TransHistPage implements OnInit {
               console.log(matchedTransaction)
               await this.updateTransaction(response, transaction.id);
             }else if (matchedTransaction && matchedTransaction.RecordStatus === 'E') {
-              this.uiProviderService.presentToast('Error', matchedTransaction.Message + " for " + transaction.poNumber + " " + transaction.itemNumber, 'danger');
+              this.uiProviderService.presentToast(MESSAGES.ERROR, matchedTransaction.Message + " for " + transaction.poNumber + " " + transaction.itemNumber, Color.ERROR);
               console.log(matchedTransaction)
               await this.updateTransaction(response, transaction.id);
             } else {
-              this.uiProviderService.presentToast('Error', 'post failed for ' + transaction.poNumber + " " + transaction.itemNumber, 'tertiary');
+              this.uiProviderService.presentToast(MESSAGES.ERROR, 'post failed for ' + transaction.poNumber + " " + transaction.itemNumber, Color.TERTIARY);
             }
           })
           await this.performDeltaSync();
@@ -134,11 +134,11 @@ export class TransHistPage implements OnInit {
 
       }
       else {
-        this.uiProviderService.presentToast('Success','No pending transactions left', 'warning')
+        this.uiProviderService.presentToast(MESSAGES.SUCCESS,'No pending transactions left', Color.WARNING)
         return null
       }
     } catch (error) {
-      this.uiProviderService.presentToast('error', 'Error building payload', 'danger');
+      this.uiProviderService.presentToast(MESSAGES.ERROR, 'Error building payload', Color.ERROR);
       console.error('Error fetching or processing transactions:', error);
     }
   }
@@ -155,10 +155,10 @@ export class TransHistPage implements OnInit {
     ]
     try{
       await this.sqliteService.executeCustonQuery(query, payload)
-      this.uiProviderService.presentToast('Success', 'Transaction status updated successfully');
+      this.uiProviderService.presentToast(MESSAGES.SUCCESS, 'Transaction status updated successfully');
     } catch (error) {
-      console.log("error while updating transaction: ",error)
-      this.uiProviderService.presentToast('error', 'Transaction not updated to database', 'danger');
+      console.error("error while updating transaction: ",error)
+      this.uiProviderService.presentToast(MESSAGES.ERROR, 'Transaction not updated to database', Color.ERROR);
     }
   }
 
@@ -170,14 +170,6 @@ export class TransHistPage implements OnInit {
     })
   }
 
-  generateFullPayload(payloads: any) {
-    const payloadObj = {
-      "Input": {
-          "parts": payloads
-      }
-    }
-    return payloadObj
-  }
 
   async deletetransaction(id: number) {
     console.log("deleteLocation", id);
@@ -189,7 +181,7 @@ export class TransHistPage implements OnInit {
 
         this.cdr.detectChanges();
         await this.sqliteService.executeCustonQuery(`DELETE FROM ${TableNames.TRANSACTIONS} WHERE id = ?`, [id]);
-        this.uiProviderService.presentToast('Success', 'Transaction deleted successfully');
+        this.uiProviderService.presentToast(MESSAGES.SUCCESS, 'Transaction deleted successfully');
         
       }
   }
@@ -198,7 +190,7 @@ export class TransHistPage implements OnInit {
     // const params = `${this.selectedOrg.InventoryOrgId_PK}/""/""`;
     this.docsForReceivingSubscription = this.apiService.fetchAllByUrl(ApiSettings.DOCS4RECEIVING + params).subscribe({
       next: async (resp: any) => {
-        this.uiProviderService.presentToast('Success', 'transaction started', 'success');
+        this.uiProviderService.presentToast(MESSAGES.SUCCESS, 'transaction started', MESSAGES.SUCCESS);
         if (resp && resp.status === 200) {
           const columns = Object.keys(resp.body.Docs4Receiving[0])
           try {
@@ -222,13 +214,13 @@ export class TransHistPage implements OnInit {
           }
         } else if (resp && resp.status === 204) {
           console.log('no docs for receiving in delta');
-          this.uiProviderService.presentToast('Success', 'No docs for receiving in delta');
+          this.uiProviderService.presentToast(MESSAGES.SUCCESS, 'No docs for receiving in delta');
         } else {
-          console.log('error in performDeltaSync: ', resp);
+          console.error('error in performDeltaSync: ', resp);
         }
           
         }, error: (err) => {
-          console.log('error in performDeltaSync: ', err);
+          console.error('error in performDeltaSync: ', err);
         }
       })
   }
