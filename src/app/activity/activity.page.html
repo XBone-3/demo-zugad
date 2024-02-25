@@ -15,22 +15,6 @@
 <ion-content [fullscreen]="true">
  <ion-list *ngIf="isOrgLoaded === true && isRespLoaded === true">
   
-  <!-- <ion-item>
-    <ion-thumbnail>
-      <ion-spinner *ngIf="loadLocationStatus" name="bubbles"></ion-spinner>
-      <ion-icon *ngIf="!loadLocationStatus" name="location-outline"></ion-icon>
-    </ion-thumbnail>
-    <ion-card>
-      
-      <ion-card-header>
-        <ion-card-title>{{ loadLocations }}</ion-card-title>
-      </ion-card-header>
-
-      <ion-card-content>
-        <p>Status: {{ loadLocationStatus? "Locations Loading ...": "Locations Loaded" + " " + locations }}</p>
-      </ion-card-content>
-    </ion-card>
-  </ion-item> -->
   <ion-item>
     <ion-thumbnail>
       <ion-spinner *ngIf="loadSubInventoryStatus" name="bubbles"></ion-spinner>

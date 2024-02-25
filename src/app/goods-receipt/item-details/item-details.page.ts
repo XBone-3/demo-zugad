@@ -1,5 +1,4 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
-
 import { ModalController } from '@ionic/angular';
 import { NodeApiService } from 'src/app/providers/node-api.service';
 import { SqliteService } from 'src/app/providers/sqlite.service';
@@ -38,7 +37,7 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
   itemData: any[] = [];
   uomCode: string = '';
   subInvCode: string = '';
-  locaCode: string = '';
+  locatorCode: string = '';
   itemRevCode: any;
   qtyRecieved: number = 0;
   qtyRemaining: number = 0;
@@ -54,12 +53,10 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
   constructor(
     private sharedService: SharedService,
     private apiService: NodeApiService,
-    private sqliteService: SqliteService,
     private uiProviderService: UiProviderService,
     private activatedRoute: ActivatedRoute,
     private networkService: NetworkService,
     private modalController: ModalController,
-    private authService: AuthService
   ) { 
     this.apiService.getValue('loginData').then((val) => {
       this.userDetails = val[0];
@@ -106,7 +103,7 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
           this.uiProviderService.presentToast(MESSAGES.ERROR, 'Please select Sub Inventory Code', Color.ERROR);
           throw new Error;
         }
-        else if (this.locaCode == "" || this.locaCode == null) {
+        else if (this.locatorCode == "" || this.locatorCode == null) {
           this.uiProviderService.presentToast(MESSAGES.ERROR, 'Please select Locator Code', Color.ERROR);
           throw new Error;
         }
@@ -151,6 +148,7 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
                 transactionPayload.receiptInfo = response[0].ReceiptNumber;
                 
                 this.uiProviderService.presentToast(MESSAGES.SUCCESS, 'Goods receipt created successfully');
+
                 this.item.QtyRemaining = this.item.QtyRemaining - parseInt(this.QtyReceiving);
                 this.item.QtyReceived = this.item.QtyReceived + parseInt(this.QtyReceiving);
               } else {
@@ -158,8 +156,7 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
                 transactionPayload.error = response[0].Message;
                 this.uiProviderService.presentToast(MESSAGES.ERROR, response[0].Message, Color.ERROR);
               }
-              
-              await this.getDocsForReceivingPost();
+              await this.sharedService.performDeltaSync(TableNames.DOCS4RECEIVING, this.selectedOrg);
             },
             error: (error) => {
               console.error("error while performing post transaction: ", error)
@@ -170,7 +167,6 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
             }
           })
         } else {
-          // const offlinePayload = this.transactionObject();
           await this.sharedService.insertTransaction(transactionPayload, TableNames.TRANSACTIONS);
           this.uiProviderService.presentToast(MESSAGES.SUCCESS, 'Goods receipt saved offline');
           this.item.QtyRemaining = this.item.QtyRemaining - parseInt(this.QtyReceiving);
@@ -200,7 +196,7 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
       destinationTypeCode: this.item.DestinationType,
       itemNumber: this.item.ItemNumber,
       Subinventory: this.subInvCode,
-      Locator: this.locaCode,
+      Locator: this.locatorCode,
       ShipmentNumber: "",
       LpnNumber: "",
       OrderLineId: "",
@@ -220,57 +216,12 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
     return offlinePayload;
   }
 
-
-  async getDocsForReceivingPost() {
-    const params = this.generateParams();
-    this.docsForReceivingSubscription = this.apiService.fetchAllByUrl(ApiSettings.DOCS4RECEIVING + params).subscribe({
-      next: async (resp: any) => {
-        if (resp && resp.status === 200) {
-          alert(JSON.stringify(resp.body))
-          const columns = Object.keys(resp.body.Docs4Receiving[0])
-          try {
-            await resp.body.Docs4Receiving.forEach(async (element: any) => {
-              if (element["Flag"] === 'D') {
-                await this.sqliteService.executeCustonQuery(`DELETE FROM ${TableNames.DOCS4RECEIVING} WHERE OrderLineId=? AND PoLineLocationId=? AND ShipmentLineId=?`, [element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);
-              } else {
-                await this.sqliteService.insertData(`INSERT OR REPLACE INTO ${TableNames.DOCS4RECEIVING} (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`, Object.values(element));
-                const updateQuery = `
-                  UPDATE ${TableNames.DOCS4RECEIVING} 
-                  SET QtyOrdered = ?, QtyReceived = ?, QtyRemaining = ?
-                  WHERE OrderLineId = ?
-                  AND PoLineLocationId = ?
-                  AND ShipmentLineId = ?;`;
-
-              await this.sqliteService.executeCustonQuery(updateQuery, [element['QtyOrdered'], element['QtyReceived'], element['QtyRemaining'], element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);              }
-            })
-          } catch (error) {
-            console.log('error in performDeltaSync: ', error);
-          }
-        } else if (resp && resp.status === 204) {
-          console.log('no docs for receiving in delta');
-          this.uiProviderService.presentToast(MESSAGES.SUCCESS, 'No docs for receiving in delta');
-        } else {
-          console.log('error in performDeltaSync: ', resp);
-        }
-        }, error: (err) => {
-          console.log('error in performDeltaSync: ', err);
-          alert('error in performDeltaSync: ' + JSON.stringify(err));
-        }
-      })
-  }
-
-  generateParams() {
-    const orgId = this.selectedOrg.InventoryOrgId_PK
-    const formattedDate = this.authService.lastLoginDate
-    return `${orgId}/"${formattedDate}"/"N"`
-   }
-
    async loadItemsData() {
     try {
       this.itemData = [this.item];
       this.uomCode = this.itemData[0].ItemUom;
       this.subInvCode = this.itemData[0].DefaultSubInventoryCode;
-      this.locaCode = this.itemData[0].DefaultLocator;
+      this.locatorCode = this.itemData[0].DefaultLocator;
       this.itemRevCode = this.itemData[0].ItemRevision;
       this.qtyRecieved = this.itemData[0].QtyOrdered;
       this.itemData[0].QtyRemaining;
@@ -303,7 +254,7 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
             this.subInvCode = receivedData.data;
             break;
           case 'LOCATOR':
-            this.locaCode = receivedData.data;
+            this.locatorCode = receivedData.data;
             break;
           case 'LOT-CONTROLLED':
             this.lotData = receivedData.data;
@@ -416,7 +367,7 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
                   PoLineLocationId: item.PoLineLocationId,
                   DestinationTypeCode: item.DestinationType,
                   Subinventory: this.subInvCode,
-                  Locator: this.locaCode,
+                  Locator: this.locatorCode,
                   ShipmentNumber: item.ShipmentNumber,
                   LpnNumber: item.LpnNumber,
                   OrderLineId: item.OrderLineId,
@@ -431,10 +382,10 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
   }
   onSubInvEdit() {
     this.subInvCode = "";
-    this.locaCode = "";
+    this.locatorCode = "";
   }
   onLocatorEdit() {
-    this.locaCode = ""
+    this.locatorCode = ""
   }
 
   onQuantityChange(newQuantity: number) {
@@ -447,7 +398,7 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
 
 
   onLocatorChange(locator: any) {
-    this.locaCode = locator;
+    this.locatorCode = locator;
   }
 
   ngOnDestroy() {

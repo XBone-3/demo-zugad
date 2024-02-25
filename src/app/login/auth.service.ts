@@ -46,7 +46,8 @@ export class AuthService {
       username: username,
       password: password
     }
-    this.apiService.fetchLoginData(data).subscribe({next: async (res: any) => {
+    this.apiService.fetchLoginData(data).subscribe({
+      next: async (res: any) => {
       if (res) {
         if (res?.token) {
           this.apiService.setToken('token', res.token); 
@@ -121,7 +122,7 @@ export class AuthService {
         } 
       }  
     }, error: (err) => {
-      console.log('Login Failed', err);
+      console.error('Login Failed', err);
       this.uiProviderService.presentToast('Error', 'Login Service is down', 'danger');
       this.uiProviderService.dismissLoading();
     }, complete: () => {

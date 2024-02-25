@@ -1,11 +1,12 @@
-import { Component, OnInit, ViewChild, Input, Output, EventEmitter, TemplateRef } from '@angular/core';
+import { Component, OnInit, ViewChild, TemplateRef } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { IonModal, ModalController, NavParams, ToastController } from '@ionic/angular';
+import { ModalController, NavParams } from '@ionic/angular';
 import { Color, MESSAGES, TableNames } from '../CONSTANTS/CONSTANTS';
  import { LotListPage } from '../lot-list/lot-list.page';
 import { SharedService } from '../providers/shared.service';
 import { NodeApiService } from '../providers/node-api.service';
 import { UiProviderService } from '../providers/ui-provider.service';
+import { ChangeDetectorRef } from '@angular/core';
 
 
 @Component({
@@ -45,7 +46,8 @@ export class CommonSharedListPage implements OnInit {
     private sharedService: SharedService,
     private fb: FormBuilder,
     private uiProviderService: UiProviderService,
-    private apiService: NodeApiService
+    private apiService: NodeApiService,
+    private cdr: ChangeDetectorRef
   ) {
     this.receivedItemMsg = this.navParams.get('data');
     this.maxTotalQuantity = this.receivedItemMsg[3];
@@ -67,7 +69,6 @@ export class CommonSharedListPage implements OnInit {
   async getModalMsgData() {
     try {
       if (this.receivedItemMsg[0] == 'UOM') {
-        // this.loadUomRecords();
         try {
           this.commonList = await this.sharedService.getTableData(TableNames.UOM);
         } catch {
@@ -75,7 +76,6 @@ export class CommonSharedListPage implements OnInit {
         }
         this.templateIdentifier = this.uomTemplate;
       } else if (this.receivedItemMsg[0] == 'SUB-INV') {
-        // this.loadSubInvRecords();
         try {
           this.subInvRecords();
         } catch (error) {
@@ -83,7 +83,6 @@ export class CommonSharedListPage implements OnInit {
         }
         this.templateIdentifier = this.subInvTemplate;
       } else if (this.receivedItemMsg[0] == 'LOCATOR') {
-        // this.loadLocatRecords();
         try {
           this.locatorRecords();
         } catch {
@@ -91,7 +90,6 @@ export class CommonSharedListPage implements OnInit {
         }
         this.templateIdentifier = this.locTemplate;
       } else if (this.receivedItemMsg[0] == 'LOT-CONTROLLED') {
-        // this.loadLotControlRecords();
         try {
           this.commonList = await this.sharedService.getCustomTableData(TableNames.LOTS, this.receivedItemMsg[2]?.ItemNumber);
         } catch {
@@ -111,7 +109,6 @@ export class CommonSharedListPage implements OnInit {
           });
         }
       } else if (this.receivedItemMsg[0] == 'SERIAL-CONTROLLED') {
-        // this.loadSerialRecords();
         try {
           this.commonList = await this.sharedService.getCustomTableData(TableNames.SERIALS, this.receivedItemMsg[2]?.ItemNumber);
         } catch {
@@ -124,7 +121,6 @@ export class CommonSharedListPage implements OnInit {
         }
 
       } else if (this.receivedItemMsg[0] == 'REV') {
-        // this.loadRevisionsRecords();
         try {
           this.commonList = await this.sharedService.getCustomTableData(TableNames.REVISIONS, this.receivedItemMsg[2]?.ItemNumber);
         } catch {
@@ -136,30 +132,6 @@ export class CommonSharedListPage implements OnInit {
       console.error('Error getting modal data');
     }
   }
-
-  // async loadUomRecords() {
-  //   try {
-  //     this.commonList = await this.sharedService.getTableData(TableNames.UOM);
-  //   } catch {
-  //     console.error('Error fetching Uom Records');
-  //   }
-  // }
-
-  // async loadLotControlRecords() {
-  //   try {
-  //     this.commonList = await this.sharedService.getCustomTableData(TableNames.LOTS, this.receivedItemMsg[2]?.ItemNumber);
-  //   } catch {
-  //     console.error('Error fetching Lot Records');
-  //   }
-  // }
-
-  // async loadSubInvRecords() {
-  //   try {
-  //     this.subInvRecords(); // Load all records initially
-  //   } catch (error) {
-  //     console.error('Error fetching Sub Inv Records', error);
-  //   }
-  // }
 
   onSearch(event: any) {
     const searchTerm = event.detail.value;
@@ -194,14 +166,6 @@ export class CommonSharedListPage implements OnInit {
     this.locatorRecords();
   }
 
-  // async loadLocatRecords() {
-  //   try {
-  //     this.locatorRecords();
-  //   } catch {
-  //     console.error('Error fetching Locator Records');
-  //   }
-  // }
-
   onSearchLoc(event: any) {
     const searchTerm = event.detail.value;
     if (searchTerm && searchTerm.trim() !== '') {
@@ -224,27 +188,10 @@ export class CommonSharedListPage implements OnInit {
     }
   }
 
-
-  // async loadSerialRecords() {
-  //   try {
-  //     this.commonList = await this.sharedService.getCustomTableData(TableNames.SERIALS, this.receivedItemMsg[2]?.ItemNumber);
-  //   } catch {
-  //     console.error('Error fetching Serial Records');
-  //   }
-  // }
-
-
-  // async loadRevisionsRecords() {
-  //   try {
-  //     this.commonList = await this.sharedService.getCustomTableData(TableNames.REVISIONS, this.receivedItemMsg[2]?.ItemNumber);
-  //   } catch {
-  //     console.error('Error fetching Revision Records');
-  //   }
-  // }
   onModalClose(data: any) {
     if (this.receivedItemMsg[0] == "LOT") {
       if (this.totalLotTypedQuantity != this.maxTotalQuantity) {
-        alert('Total Quantity should be one');
+        alert(`Total Quantity should be ${this.maxTotalQuantity}`);
       }
       else {
         this.modalController.dismiss({
@@ -292,9 +239,9 @@ export class CommonSharedListPage implements OnInit {
 
     modal.onDidDismiss().then((dataReturned: any) => {
       if (dataReturned.data) {
-        let val = dataReturned.data;
+        let value = dataReturned.data;
         const lastSection = this.sections[this.sections.length - 1];
-        lastSection.get('lotCode')?.setValue(val.data);
+        lastSection.get('lotCode')?.setValue(value.data);
       }
     });
     return await modal.present();
@@ -304,6 +251,7 @@ export class CommonSharedListPage implements OnInit {
 
   deleteSerial(index: number) {
     this.serialList.splice(index, 1);
+    this.cdr.detectChanges();
   }
 
   goBack() {
@@ -322,7 +270,7 @@ export class CommonSharedListPage implements OnInit {
         this.sections.push(newSection);
         this.updateTotalQuantity();
       } else {
-        this.uiProviderService.presentToast(MESSAGES.ERROR, 'Please fill both Quantity and lot number.', Color.ERROR);
+        this.uiProviderService.presentToast(MESSAGES.ERROR, 'Quantity and lot number is required.', Color.ERROR);
       }
     } else {
       this.uiProviderService.presentToast(MESSAGES.ERROR, `Total quantity should be ${this.receivedItemMsg[3]}.`, Color.ERROR);

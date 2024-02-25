@@ -19,7 +19,8 @@ export class UiProviderService {
       header: header,
       message: message,
       duration: 2000,
-      color: toastColor
+      color: toastColor,
+      position: 'top'
     });
     await toast.present();
   }
@@ -30,7 +31,6 @@ export class UiProviderService {
     });
     this.loaders.push(loading);
     await loading.present();
-    
   }
 
   presentAlert(header: string, message: string, accept_btn_text: string = 'OK') {
@@ -59,6 +59,5 @@ export class UiProviderService {
     this.loaders.forEach(async (loader) => {
       await loader.dismiss();
     })
-    this.loaders = [];
   }
 }

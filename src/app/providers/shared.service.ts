@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { SqliteService } from './sqlite.service';
 import { UiProviderService } from './ui-provider.service';
-import { TableNames, MESSAGES, RESPONSIBILITIES, Color } from '../CONSTANTS/CONSTANTS';
+import { TableNames, MESSAGES, RESPONSIBILITIES, Color, TypeOfApi, ApiSettings, TransactionType } from '../CONSTANTS/CONSTANTS';
 import { formatDate } from '@angular/common';
 import { NodeApiService } from './node-api.service';
 import { Subscription } from 'rxjs';
@@ -24,85 +24,124 @@ export class SharedService {
   }
   
 
+  // async fetchTableMetaData(api: string, tableName: string, params: string): Promise<boolean> {
+  //   let success = false
+  //   this.MetaDataSubscription = this.apiService.fetchAllByUrl(api + params).subscribe({
+  //     next: async (resp: any) => {
+  //       if (resp && resp.status === 200) {
+  //         try {
+  //           await this.createMetaDataTable(resp.body, tableName)
+  //           success = true
+  //         } catch (error) {
+  //           console.error(`error while creating table ${tableName}`, error);
+  //         }
+  //       } 
+  //       else {
+  //         this.uiProviderService.presentToast(MESSAGES.ERROR, `No metadata available for ${tableName}`, Color.ERROR);
+  //       }
+  //     },
+  //     error: (error) => {
+  //       console.error(`error while fetching meta ${tableName}`, error)
+  //       this.uiProviderService.presentToast(MESSAGES.ERROR, 'failed to gettable metadata', Color.ERROR);
+  //     }
+  //   })
+  //   return success
+  // }
   async fetchTableMetaData(api: string, tableName: string, params: string): Promise<boolean> {
-    let success = false
-    this.MetaDataSubscription = this.apiService.fetchAllByUrl(api + params).subscribe({
-      next: async (resp: any) => {
-        if (resp && resp.status === 200) {
-          try {
-            await this.createMetaDataTable(resp.body, tableName)
-            success = true
-          } catch (error) {
-            console.error(`error while creating table ${tableName}`, error);
-          }
-        } 
-        else {
-          this.uiProviderService.presentToast(MESSAGES.ERROR, `No metadata available for ${tableName}`, Color.ERROR);
-        }
-      },
-      error: (error) => {
-        console.error(`error while fetching meta ${tableName}`, error)
-        this.uiProviderService.presentToast(MESSAGES.ERROR, 'failed to gettable metadata', Color.ERROR);
-      }
-    })
-    return success
-  }
-
-  async fetchTableData(api: string, tableName: string, params: string): Promise<boolean> {
-    let success = false
-    this.DataSubscription = this.apiService.fetchAllByUrl(api + params).subscribe({
-      next: async (resp: any) => {
-        if (resp && resp.status === 200) {
-          try {
-            const data = this.getBodyFromResponse(resp, tableName)
-            if (tableName === TableNames.DOCS4RECEIVING || tableName === TableNames.LOCATORS) {
-              await this.insertDataToTableChunks(data, tableName)
-            } else if (tableName === TableNames.LOTS || tableName === TableNames.SERIALS) {
-              await this.createTableDataCSV(tableName, data)
-              await this.insertDataToTableCSV(tableName, data)
-            } else {
-              await this.insertDataToTable(data, tableName)
+    return new Promise<boolean>((resolve) => {
+      this.MetaDataSubscription = this.apiService.fetchAllByUrl(api + params).subscribe({
+        next: async (resp: any) => {
+          let success = false;
+          if (resp && resp.status === 200) {
+            try {
+              await this.createMetaDataTable(resp.body, tableName);
+              success = true;
+            } catch (error) {
+              console.error(`error while creating table ${tableName}`, error);
             }
-            success = true
-          } catch (error) {
-            console.error(`error while inserting ${tableName}`, error);
+          } else {
+            this.uiProviderService.presentToast(MESSAGES.ERROR, `No metadata available for ${tableName}`, Color.ERROR);
           }
-        } else {
-          this.uiProviderService.presentToast(MESSAGES.ERROR, `No Data available for ${tableName}`, Color.ERROR);
+  
+          resolve(success);
+        },
+        error: (error) => {
+          console.error(`error while fetching meta ${tableName}`, error);
+          this.uiProviderService.presentToast(MESSAGES.ERROR, 'failed to get table metadata', Color.ERROR);
+          resolve(false); // Resolve with false in case of an error.
+        },
+      });
+    });
+  }
+  
+  async fetchTableData(api: string, tableName: string, params: string): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+      let success = false
+      this.DataSubscription = this.apiService.fetchAllByUrl(api + params).subscribe({
+        next: async (resp: any) => {
+          if (resp && resp.status === 200) {
+            try {
+              const data = this.getBodyFromResponse(resp, tableName)
+              if (tableName === TableNames.DOCS4RECEIVING || tableName === TableNames.LOCATORS) {
+                await this.insertDataToTableChunks(data, tableName)
+              } else if (tableName === TableNames.LOTS || tableName === TableNames.SERIALS) {
+                await this.createTableDataCSV(tableName, data)
+                await this.insertDataToTableCSV(tableName, data)
+              } else {
+                await this.insertDataToTable(data, tableName)
+              }
+              success = true
+            } catch (error) {
+              console.error(`error while inserting ${tableName}`, error);
+            }
+          } else {
+            this.uiProviderService.presentToast(MESSAGES.ERROR, `No Data available for ${tableName}`, Color.ERROR);
+          }
+          resolve(success)
+          
+        }, error: (error) => {
+          console.error(`error while fetching data for ${tableName}`,error);
+          resolve(false)
         }
-        
-      }, error: (error) => {
-        console.error(`error while fetching data for ${tableName}`,error);
-        success = false
-      }
+      })
     })
-    return success
   }
 
-  getBodyFromResponse(response: any, tableName: string) {
-    if (tableName === TableNames.GL_PERIODS) {
-      return response.body.GLPeriods
-    } else if (tableName === TableNames.PURCHASING_PERIODS) {
-      return response.body.POPeriods
-    } else if (tableName === TableNames.INVENTORY_PERIODS) {
-      return ''
-    } else if (tableName === TableNames.GET_REASONS) {
-      return response.body.Reasons
-    } else if (tableName === TableNames.SUB_INVENTORY) {
-      return response.body.ActiveSubInventories
-    } else if (tableName === TableNames.LOCATORS) {
-      return response.body.ActiveLocators
-    } else if (tableName === TableNames.DOCS4RECEIVING) {
-      return response.body.Docs4Receiving
-    } else if (tableName === TableNames.UOM || tableName === TableNames.REVISIONS) {
-      return response.body.Items
-    } else if (tableName === TableNames.LOTS) {
-      return response.body
-    } else {
-      return response.body
-    }
-  }
+  async performDeltaSync(tableName: any, organisation: any) {
+    const params = this.generateParams(TransactionType.DELTA_SYNC, '', organisation);
+    this.apiService.fetchAllByUrl(ApiSettings.DOCS4RECEIVING + params).subscribe({
+      next: async (resp: any) => {
+        if (resp && resp.status === 200) {
+          const columns = Object.keys(resp.body.Docs4Receiving[0])
+          try {
+            await resp.body.Docs4Receiving.forEach(async (element: any) => {
+              if (element["Flag"] === 'D') {
+                await this.sqliteService.executeCustonQuery(`DELETE FROM ${tableName} WHERE OrderLineId=? AND PoLineLocationId=? AND ShipmentLineId=?`, [element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);
+              } else {
+                await this.sqliteService.insertData(`INSERT INTO ${tableName} (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`, Object.values(element));
+                const updateQuery = `
+                  UPDATE ${tableName} 
+                  SET QtyOrdered = ?, QtyReceived = ?, QtyRemaining = ?
+                  WHERE OrderLineId = ?
+                  AND PoLineLocationId = ?
+                  AND ShipmentLineId = ?;`;
 
+              await this.sqliteService.executeCustonQuery(updateQuery, [element['QtyOrdered'], element['QtyReceived'], element['QtyRemaining'], element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);              }
+            })
+          } catch (error) {
+            console.error('error in performDeltaSync: ', error);
+          }
+        } else if (resp && resp.status === 204) {
+          this.uiProviderService.presentToast(MESSAGES.SUCCESS, 'No docs for receiving in delta');
+        } else {
+          console.error('error in performDeltaSync: ', resp);
+        }
+        }, error: (err) => {
+          console.error('error in performDeltaSync: ', err);
+        }
+      })
+  }
+  
   async createMetaDataTable(response: any, tableName: string) {
     let status;
     try {
@@ -118,7 +157,7 @@ export class SharedService {
     }
     return status
   }
-
+  
   async insertDataToTable(response: any, tableName: string) {
     try {
       const columns = Object.keys(response[0])
@@ -212,11 +251,15 @@ export class SharedService {
       OrganizationCode TEXT,
       serialNumbers TEXT,
       lotQuantity TEXT,
-      lotCode TEXT
+      lotCode TEXT,
+      userId TEXT,
+      employeeId TEXT,
+      bussinessUnitId TEXT,
+      inventoryOrgId TEXT,
       )`
     await this.sqliteService.createTable(createTransactionHistoryTableQuery, table_name);
   }
-
+  
 
   insertTransaction(item: any, tableName: string) {
     const query = `INSERT INTO ${tableName} (poNumber, titleName, syncStatus, createdTime, quantityReceived, receiptInfo,error,status,shipLaneNum,
@@ -225,7 +268,7 @@ export class SharedService {
       AutoTransactCode,
       OrganizationCode,serialNumbers,lotQuantity,lotCode)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-    `;
+      `;
     const data = [
       item.poNumber,
       item.titleName,
@@ -273,29 +316,29 @@ export class SharedService {
       );
       if (successTransactions.length > 0) {
         const payloads = successTransactions.map((transaction: any, index: any) =>
-          this.buildPayloadFromTransaction(transaction, index, selectedOrg, userDetails)
+        this.buildPayloadFromTransaction(transaction, index, selectedOrg, userDetails)
         );
         const combinedPayload = this.combinePayloads(payloads);
       }
       else {
-        this.uiProviderService.presentToast('Success','No pending transactions left', 'warning')
+        this.uiProviderService.presentToast(MESSAGES.SUCCESS, 'No pending transactions left', Color.SUCCESS)
       }
     } catch (error) {
       console.error('Error fetching or processing transactions:', error);
     }
   }
 
-  buildPayloadFromTransaction(transactionItem: any, index: any, selectedOrg: any, userDetails: any) {
+  buildPayloadFromTransaction(item: any, index: any, selectedOrg: any, userDetails: any) {
     const requestBody = {
       id: `part${index + 1}`,
       path: '/receivingReceiptRequests',
       operation: 'create',
       payload: {
-        ReceiptSourceCode: transactionItem?.ReceiptSourceCode,
-        OrganizationCode: transactionItem?.OrganizationCode,
+        ReceiptSourceCode: item?.ReceiptSourceCode,
+        OrganizationCode: item?.OrganizationCode,
         EmployeeId: userDetails.PERSON_ID,
         BusinessUnitId: selectedOrg?.BusinessUnitId,
-        ReceiptNumber: transactionItem?.receiptInfo,
+        ReceiptNumber: item?.receiptInfo,
         BillOfLading: '',
         FreightCarrierName: '',
         PackingSlip: '',
@@ -303,7 +346,7 @@ export class SharedService {
         ShipmentNumber: '',
         ShippedDate: '',
         VendorSiteId: '',
-        VendorId: parseInt(transactionItem?.vendorId),
+        VendorId: parseInt(item?.vendorId),
         attachments: [],
         CustomerId: '',
         InventoryOrgId: selectedOrg?.InventoryOrgId_PK,
@@ -315,34 +358,34 @@ export class SharedService {
         InsertAndProcessFlag: 'true',
         lines: [
           {
-            ReceiptSourceCode: transactionItem?.ReceiptSourceCode,
+            ReceiptSourceCode: item?.ReceiptSourceCode,
             MobileTransactionId: new Date().getTime(),
-            TransactionType: transactionItem?.TransactionType,
-            AutoTransactCode: transactionItem.AutoTransactCode,
-            OrganizationCode: transactionItem?.OrganizationCode,
-            DocumentNumber: transactionItem?.poNumber,
-            DocumentLineNumber: transactionItem?.shipLaneNum,
-            ItemNumber: transactionItem?.itemNumber,
+            TransactionType: item?.TransactionType,
+            AutoTransactCode: item.AutoTransactCode,
+            OrganizationCode: item?.OrganizationCode,
+            DocumentNumber: item?.poNumber,
+            DocumentLineNumber: item?.shipLaneNum,
+            ItemNumber: item?.itemNumber,
             TransactionDate: formatDate(new Date(), "dd-MM-yyyy HH:mm:ss", "en-US"),
-            Quantity: transactionItem?.quantityReceived,
-            UnitOfMeasure: transactionItem?.unitOfMeasure,
-            SoldtoLegalEntity: transactionItem?.SoldtoLegalEntity,
-            SecondaryUnitOfMeasure: transactionItem?.SecondaryUnitOfMeasure,
-            ShipmentHeaderId: transactionItem?.ShipmentHeaderId,
-            ItemRevision: transactionItem?.ItemRevision != null ? transactionItem?.ItemRevision : "",
-            POHeaderId: parseInt(transactionItem?.poHeaderId),
-            POLineLocationId: parseInt(transactionItem?.poLineLocationId),
-            POLineId: parseInt(transactionItem?.poLineId),
-            PODistributionId: parseInt(transactionItem?.poDistributionId),
+            Quantity: item?.quantityReceived,
+            UnitOfMeasure: item?.unitOfMeasure,
+            SoldtoLegalEntity: item?.SoldtoLegalEntity,
+            SecondaryUnitOfMeasure: item?.SecondaryUnitOfMeasure,
+            ShipmentHeaderId: item?.ShipmentHeaderId,
+            ItemRevision: item?.ItemRevision != null ? item?.ItemRevision : "",
+            POHeaderId: parseInt(item?.poHeaderId),
+            POLineLocationId: parseInt(item?.poLineLocationId),
+            POLineId: parseInt(item?.poLineId),
+            PODistributionId: parseInt(item?.poDistributionId),
             ReasonName: '',
             Comments: '',
             ShipmentLineId: '',
             transactionAttachments: [],
-            lotItemLots: (transactionItem?.lotQuantity && transactionItem?.lotQuantity.trim() !== "")
-              ? this.buildLotPayload(transactionItem?.lotQuantity, transactionItem?.lotCode)
+            lotItemLots: (item?.lotQuantity && item?.lotQuantity.trim() !== "")
+              ? this.buildLotPayload(item?.lotQuantity, item?.lotCode)
               : [],
-            serialItemSerials: (transactionItem?.serialNumbers && transactionItem?.serialNumbers.trim() !== "")
-              ? transactionItem?.serialNumbers.split(',').map((serial: any) => ({
+            serialItemSerials: (item?.serialNumbers && item?.serialNumbers.trim() !== "")
+              ? item?.serialNumbers.split(',').map((serial: any) => ({
                 fromSerial: serial ? serial : "",
                 toSerial: serial ? serial : ""
               }))
@@ -353,13 +396,13 @@ export class SharedService {
             ReceiptAdviceLineId: '',
             TransferOrderHeaderId: '',
             TransferOrderLineId: '',
-            PoLineLocationId: transactionItem?.poLineLocationId,
-            DestinationTypeCode: transactionItem?.destinationTypeCode,
-            Subinventory: transactionItem?.Subinventory,
-            Locator: transactionItem?.Locator,
-            ShipmentNumber: transactionItem?.ShipmentNumber,
-            LpnNumber: transactionItem?.LpnNumber,
-            OrderLineId: transactionItem?.OrderLineId,
+            PoLineLocationId: item?.poLineLocationId,
+            DestinationTypeCode: item?.destinationTypeCode,
+            Subinventory: item?.Subinventory,
+            Locator: item?.Locator,
+            ShipmentNumber: item?.ShipmentNumber,
+            LpnNumber: item?.LpnNumber,
+            OrderLineId: item?.OrderLineId,
           },
         ],
       },
@@ -384,7 +427,7 @@ export class SharedService {
     return [];
 
   }
-
+  
   combinePayloads(payloads: any[]) {
     const requestBody: any = {
       Input: {
@@ -393,6 +436,115 @@ export class SharedService {
     };
 
     return requestBody;
+  }
+
+  buildGoodsReceiptPayload(item: any, userDetails: any, selectedOrg: any, quantityReceived: any, uomCode: any, itemRevCode: any, SerialData: any, subInvCode: any, locatorCode: any) {
+    const requestBody: any = {
+      Input: {
+        parts: [
+          {
+            id: 'part1',
+            path: '/receivingReceiptRequests',
+            operation: 'create',
+            payload: {
+              ReceiptSourceCode: item.ReceiptSourceCode,
+              OrganizationCode: item.OrganizationCode,
+              EmployeeId: userDetails.PERSON_ID,
+              BusinessUnitId: selectedOrg.BusinessUnitId,
+              ReceiptNumber: '',
+              BillOfLading: item.BillOfLading,
+              FreightCarrierName: item.FreightCarrierName,
+              PackingSlip: item.Packingslip,
+              WaybillAirbillNumber: item.WayBillAirBillNumber,
+              ShipmentNumber: item.ShipmentNumber,
+              ShippedDate: '',
+              VendorSiteId: item.VendorSiteId,
+              VendorId: item.VendorId,
+              attachments: [],
+              CustomerId: item.CustomerId,
+              InventoryOrgId: selectedOrg.InventoryOrgId_PK,
+              DeliveryDate: '31-Jan-2024 12:00:00',
+              ResponsibilityId: '20634',
+              UserId: userDetails.USER_ID,
+              DummyReceiptNumber: new Date().getTime(),
+              BusinessUnit: 'Vision Operations',
+              InsertAndProcessFlag: 'true',
+              lines: [
+                {
+                  ReceiptSourceCode: item.ReceiptSourceCode,
+                  MobileTransactionId: new Date().getTime(),
+                  TransactionType: 'RECEIVE',
+                  AutoTransactCode: 'DELIVER',
+                  OrganizationCode: item.OrganizationCode,
+                  DocumentNumber: item.PONumber,
+                  DocumentLineNumber: item.PoShipmentNumber,
+                  ItemNumber: item.ItemNumber,
+                  TransactionDate: formatDate(new Date(), 'dd-MMM-yyyy HH:mm:ss', 'en-US'),
+                  Quantity: quantityReceived,
+                  UnitOfMeasure: uomCode,
+                  SoldtoLegalEntity: item.SoldtoLegalEntity,
+                  SecondaryUnitOfMeasure: '',
+                  ShipmentHeaderId: item.ShipmentHeaderId,
+                  ItemRevision: itemRevCode,
+                  POHeaderId: item.POHeaderId,
+                  POLineLocationId: item.POLineLocationId,
+                  POLineId: item.POLineId,
+                  PODistributionId: item.PODistributionId,
+                  ReasonName: item.ReasonName,
+                  Comments: item.Comments,
+                  ShipmentLineId: item.ShipmentLineId,
+                  transactionAttachments: [],
+                  lotItemLots: this.buildLotPayload(quantityReceived, item.LotNumber),
+                  serialItemSerials: SerialData.map((serial: any) => ({
+                    FromSerialNumber: serial,
+                    ToSerialNumber: serial
+                  })),
+                  lotSerialItemLots: [],
+                  ExternalSystemTransactionReference: 'Mobile Transaction',
+                  ReceiptAdviceHeaderId: item.ReceiptAdviceHeaderId,
+                  ReceiptAdviceLineId: item.ReceiptAdviceLineId,
+                  TransferOrderHeaderId: item.TransferOrderHeaderId,
+                  TransferOrderLineId: item.TransferOrderLineId,
+                  PoLineLocationId: item.PoLineLocationId,
+                  DestinationTypeCode: item.DestinationType,
+                  Subinventory: subInvCode,
+                  Locator: locatorCode,
+                  ShipmentNumber: item.ShipmentNumber,
+                  LpnNumber: item.LpnNumber,
+                  OrderLineId: item.OrderLineId,
+                },
+              ],
+            },
+          },
+        ],
+      },
+    };
+    return requestBody;
+  }
+
+ 
+  getBodyFromResponse(response: any, tableName: string) {
+    if (tableName === TableNames.GL_PERIODS) {
+      return response.body.GLPeriods
+    } else if (tableName === TableNames.PURCHASING_PERIODS) {
+      return response.body.POPeriods
+    } else if (tableName === TableNames.INVENTORY_PERIODS) {
+      return ''
+    } else if (tableName === TableNames.GET_REASONS) {
+      return response.body.Reasons
+    } else if (tableName === TableNames.SUB_INVENTORY) {
+      return response.body.ActiveSubInventories
+    } else if (tableName === TableNames.LOCATORS) {
+      return response.body.ActiveLocators
+    } else if (tableName === TableNames.DOCS4RECEIVING) {
+      return response.body.Docs4Receiving
+    } else if (tableName === TableNames.UOM || tableName === TableNames.REVISIONS) {
+      return response.body.Items
+    } else if (tableName === TableNames.LOTS) {
+      return response.body
+    } else {
+      return response.body
+    }
   }
 
   async deleteTransactionById(id: number): Promise<void> {
@@ -448,108 +600,7 @@ export class SharedService {
     return rows
   }
 
-// ------------------reference --------------------
-
-   // buildPayloadFromTransaction(payload: any, index: any) {
-  //   const requestBody = {
-  //     id: `part${index + 1}`,
-  //     path: '/receivingReceiptRequests',
-  //     operation: 'create',
-  //     payload: {
-  //       ReceiptSourceCode: payload?.ReceiptSourceCode,
-  //       OrganizationCode: payload?.OrganizationCode,
-  //       EmployeeId: this.userDetails.PERSON_ID,
-  //       BusinessUnitId: this.selectedOrg?.BusinessUnitId,
-  //       ReceiptNumber: payload?.receiptInfo,
-  //       BillOfLading: '',
-  //       FreightCarrierName: '',
-  //       PackingSlip: '',
-  //       WaybillAirbillNumber: '',
-  //       ShipmentNumber: '',
-  //       ShippedDate: '',
-  //       VendorSiteId: '',
-  //       VendorId: parseInt(payload?.vendorId),
-  //       attachments: [],
-  //       CustomerId: '',
-  //       InventoryOrgId: this.selectedOrg?.InventoryOrgId_PK,
-  //       DeliveryDate: '31-Jan-2024 12:00:00',
-  //       ResponsibilityId: '20634',
-  //       UserId: this.userDetails.USER_ID,
-  //       DummyReceiptNumber: new Date().getTime(),
-  //       BusinessUnit: 'Vision Operations',
-  //       InsertAndProcessFlag: 'true',
-  //       lines: [
-  //         {
-  //           ReceiptSourceCode: payload?.ReceiptSourceCode,
-  //           MobileTransactionId: new Date().getTime(),
-  //           TransactionType: payload?.TransactionType,
-  //           AutoTransactCode: payload.AutoTransactCode,
-  //           OrganizationCode: payload?.OrganizationCode,
-  //           DocumentNumber: payload?.poNumber,
-  //           DocumentLineNumber: payload?.shipLaneNum,
-  //           ItemNumber: payload?.itemNumber,
-  //           TransactionDate: formatDate(new Date(), "dd-MM-yyyy HH:mm:ss", "en-US"),
-  //           Quantity: payload?.quantityReceived,
-  //           UnitOfMeasure: payload?.unitOfMeasure,
-  //           SoldtoLegalEntity: payload?.SoldtoLegalEntity,
-  //           SecondaryUnitOfMeasure: payload?.SecondaryUnitOfMeasure,
-  //           ShipmentHeaderId: payload?.ShipmentHeaderId,
-  //           ItemRevision: payload?.ItemRevision != null ? payload?.ItemRevision : "",
-  //           POHeaderId: parseInt(payload?.poHeaderId),
-  //           POLineLocationId: parseInt(payload?.poLineLocationId),
-  //           POLineId: parseInt(payload?.poLineId),
-  //           PODistributionId: parseInt(payload?.poDistributionId),
-  //           ReasonName: '',
-  //           Comments: '',
-  //           ShipmentLineId: '',
-  //           transactionAttachments: [],
-  //           lotItemLots: (payload?.lotQuantity && payload?.lotQuantity.trim() !== "")
-  //             ? this.buildLotPayload(payload?.lotQuantity, payload?.lotCode)
-  //             : [],
-  //           serialItemSerials: (payload?.serialNumbers && payload?.serialNumbers.trim() !== "")
-  //             ? payload?.serialNumbers.split(',').map((serial: any) => ({
-  //               fromSerial: serial ? serial : "",
-  //               toSerial: serial ? serial : ""
-  //             }))
-  //             : [],
-  //           lotSerialItemLots: [],
-  //           ExternalSystemTransactionReference: 'Mobile Transaction',
-  //           ReceiptAdviceHeaderId: '',
-  //           ReceiptAdviceLineId: '',
-  //           TransferOrderHeaderId: '',
-  //           TransferOrderLineId: '',
-  //           PoLineLocationId: payload?.poLineLocationId,
-  //           DestinationTypeCode: payload?.destinationTypeCode,
-  //           Subinventory: payload?.Subinventory,
-  //           Locator: payload?.Locator,
-  //           ShipmentNumber: payload?.ShipmentNumber,
-  //           LpnNumber: payload?.LpnNumber,
-  //           OrderLineId: payload?.OrderLineId,
-  //         },
-  //       ],
-  //     },
-  //   };
-  //   return requestBody;
-  // }
-
-  // buildLotPayload(lotQuant: any, lotCodes: any) {
-  //   if (lotQuant != "" || lotQuant != null || lotCodes != "" || lotCodes != null) {
-  //     const lotNumbers = lotCodes.split(',');
-  //     const lotQuantities = lotQuant.split(',');
-  //     const resultArray = lotNumbers.map((lotNumber: any, index: any) => ({
-  //       GradeCode: '',
-  //       LotExpirationDate: formatDate(new Date(), "dd-MM-yyyy HH:mm:ss", "en-US"),
-  //       LotNumber: lotNumber ? lotNumber : "",
-  //       ParentLotNumber: '',
-  //       SecondaryTransactionQuantity: '',
-  //       TransactionQuantity: lotQuantities[index] ? lotQuantities[index] : "",
-  //     }));
-  //     return resultArray;
-  //   }
-  //   return [];
-
-  // }
-
+  
   getTableName(name: string) {
     if (name === RESPONSIBILITIES.GL_PERIODS) {
       return TableNames.GL_PERIODS
@@ -575,7 +626,7 @@ export class SharedService {
       return TableNames.SERIALS
     }
   }
-
+  
   generateParams(name: string, defaultOrgId: any, organisation: any) {
     if (name === RESPONSIBILITIES.GL_PERIODS || name === RESPONSIBILITIES.INVENTORY_PERIODS || name === RESPONSIBILITIES.PURCHASING_PERIODS) {
       return `${defaultOrgId}`
@@ -587,23 +638,128 @@ export class SharedService {
       return `${organisation.InventoryOrgId_PK}/${this.authService.lastLoginDate}/""`
     } else if (name === RESPONSIBILITIES.SERIALS) {
       return `${organisation.InventoryOrgId_PK}/""/""/""`
+    } else if (name === TransactionType.DELTA_SYNC) {
+      return `${organisation.InventoryOrgId_PK}/"${this.authService.lastLoginDate}"/"N"`
     } else {
       return ''
     }
   }
-
   
-
+  
+  
   mapTypeToSql(type: string) {
     switch (type) {
       case 'string':
         return 'TEXT';
       case 'number':
         return 'REAL';
-      case 'boolean':
-        return 'BOOLEAN';
+        case 'boolean':
+          return 'BOOLEAN';
       default:
         return 'TEXT';
+      }
     }
+
+    // ------------------reference --------------------
+    
+       // buildPayloadFromTransaction(payload: any, index: any) {
+      //   const requestBody = {
+      //     id: `part${index + 1}`,
+      //     path: '/receivingReceiptRequests',
+      //     operation: 'create',
+      //     payload: {
+      //       ReceiptSourceCode: payload?.ReceiptSourceCode,
+      //       OrganizationCode: payload?.OrganizationCode,
+      //       EmployeeId: this.userDetails.PERSON_ID,
+      //       BusinessUnitId: this.selectedOrg?.BusinessUnitId,
+      //       ReceiptNumber: payload?.receiptInfo,
+      //       BillOfLading: '',
+      //       FreightCarrierName: '',
+      //       PackingSlip: '',
+      //       WaybillAirbillNumber: '',
+      //       ShipmentNumber: '',
+      //       ShippedDate: '',
+      //       VendorSiteId: '',
+      //       VendorId: parseInt(payload?.vendorId),
+      //       attachments: [],
+      //       CustomerId: '',
+      //       InventoryOrgId: this.selectedOrg?.InventoryOrgId_PK,
+      //       DeliveryDate: '31-Jan-2024 12:00:00',
+      //       ResponsibilityId: '20634',
+      //       UserId: this.userDetails.USER_ID,
+      //       DummyReceiptNumber: new Date().getTime(),
+      //       BusinessUnit: 'Vision Operations',
+      //       InsertAndProcessFlag: 'true',
+      //       lines: [
+      //         {
+      //           ReceiptSourceCode: payload?.ReceiptSourceCode,
+      //           MobileTransactionId: new Date().getTime(),
+      //           TransactionType: payload?.TransactionType,
+      //           AutoTransactCode: payload.AutoTransactCode,
+      //           OrganizationCode: payload?.OrganizationCode,
+      //           DocumentNumber: payload?.poNumber,
+      //           DocumentLineNumber: payload?.shipLaneNum,
+      //           ItemNumber: payload?.itemNumber,
+      //           TransactionDate: formatDate(new Date(), "dd-MM-yyyy HH:mm:ss", "en-US"),
+      //           Quantity: payload?.quantityReceived,
+      //           UnitOfMeasure: payload?.unitOfMeasure,
+      //           SoldtoLegalEntity: payload?.SoldtoLegalEntity,
+      //           SecondaryUnitOfMeasure: payload?.SecondaryUnitOfMeasure,
+      //           ShipmentHeaderId: payload?.ShipmentHeaderId,
+      //           ItemRevision: payload?.ItemRevision != null ? payload?.ItemRevision : "",
+      //           POHeaderId: parseInt(payload?.poHeaderId),
+      //           POLineLocationId: parseInt(payload?.poLineLocationId),
+      //           POLineId: parseInt(payload?.poLineId),
+      //           PODistributionId: parseInt(payload?.poDistributionId),
+      //           ReasonName: '',
+      //           Comments: '',
+      //           ShipmentLineId: '',
+      //           transactionAttachments: [],
+      //           lotItemLots: (payload?.lotQuantity && payload?.lotQuantity.trim() !== "")
+      //             ? this.buildLotPayload(payload?.lotQuantity, payload?.lotCode)
+      //             : [],
+      //           serialItemSerials: (payload?.serialNumbers && payload?.serialNumbers.trim() !== "")
+      //             ? payload?.serialNumbers.split(',').map((serial: any) => ({
+      //               fromSerial: serial ? serial : "",
+      //               toSerial: serial ? serial : ""
+      //             }))
+      //             : [],
+      //           lotSerialItemLots: [],
+      //           ExternalSystemTransactionReference: 'Mobile Transaction',
+      //           ReceiptAdviceHeaderId: '',
+      //           ReceiptAdviceLineId: '',
+      //           TransferOrderHeaderId: '',
+      //           TransferOrderLineId: '',
+      //           PoLineLocationId: payload?.poLineLocationId,
+      //           DestinationTypeCode: payload?.destinationTypeCode,
+      //           Subinventory: payload?.Subinventory,
+      //           Locator: payload?.Locator,
+      //           ShipmentNumber: payload?.ShipmentNumber,
+      //           LpnNumber: payload?.LpnNumber,
+      //           OrderLineId: payload?.OrderLineId,
+      //         },
+      //       ],
+      //     },
+      //   };
+      //   return requestBody;
+      // }
+    
+      // buildLotPayload(lotQuant: any, lotCodes: any) {
+      //   if (lotQuant != "" || lotQuant != null || lotCodes != "" || lotCodes != null) {
+      //     const lotNumbers = lotCodes.split(',');
+      //     const lotQuantities = lotQuant.split(',');
+      //     const resultArray = lotNumbers.map((lotNumber: any, index: any) => ({
+      //       GradeCode: '',
+      //       LotExpirationDate: formatDate(new Date(), "dd-MM-yyyy HH:mm:ss", "en-US"),
+      //       LotNumber: lotNumber ? lotNumber : "",
+      //       ParentLotNumber: '',
+      //       SecondaryTransactionQuantity: '',
+      //       TransactionQuantity: lotQuantities[index] ? lotQuantities[index] : "",
+      //     }));
+      //     return resultArray;
+      //   }
+      //   return [];
+    
+      // }
   }
-}
+  

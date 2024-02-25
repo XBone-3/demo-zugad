@@ -58,9 +58,6 @@ export class SqliteService {
   }
 
   async dropAllTables() {
-    // [TableNames.LOGIN, locationTableName, historyTableName, TableNames.USERS].forEach(async (table) => {
-    //   await this.db.executeSql(`DROP TABLE ${table}`, []);
-    // })
     const tablesToDrop = [TableNames.DOCS4RECEIVING, TableNames.TRANSACTIONS, TableNames.LOTS, TableNames.UOM, TableNames.SERIALS, TableNames.LOCATORS, TableNames.REVISIONS, TableNames.SUB_INVENTORY];
     const dropPromises = tablesToDrop.map((tableName) => {
       const dropQuery = `DROP TABLE IF EXISTS ${tableName}`;

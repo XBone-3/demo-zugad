@@ -1,13 +1,12 @@
 import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { HttpHeaders } from '@angular/common/http';
-import { formatDate } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { SqliteService } from '../providers/sqlite.service';
 import { NetworkService } from '../providers/network.service';
 import { UiProviderService } from '../providers/ui-provider.service';
 import { NodeApiService } from '../providers/node-api.service';
 import { SharedService } from '../providers/shared.service';
-import { TableNames, ApiSettings, MESSAGES, Color } from '../CONSTANTS/CONSTANTS';
+import { TableNames, ApiSettings, MESSAGES, Color, StoredItemnames } from '../CONSTANTS/CONSTANTS';
 
 
 @Component({
@@ -24,7 +23,6 @@ export class TransHistPage implements OnInit {
   userDetails: any;
   selectedOrg: any;
   postSubscription!: Subscription
-  docsForReceivingSubscription!: Subscription;
 
   constructor(
     private sqliteService: SqliteService,
@@ -42,7 +40,7 @@ export class TransHistPage implements OnInit {
     if (users) {
       this.userDetails = users[0]
     }
-    this.selectedOrg = await this.apiService.getValue('selectedOrg')
+    this.selectedOrg = await this.apiService.getValue(StoredItemnames.SELECTED_ORG)
     await this.getTransactionData();
     this.networkSubscription = this.networkService.isNetworkAvailable().subscribe((networkStatus)=>{
       this.hasConnection = networkStatus;
@@ -50,6 +48,7 @@ export class TransHistPage implements OnInit {
   }
 
   async getTransactionData() {
+    this.transactionData = [];
     const data = await this.sqliteService.getDataFromTable(TableNames.TRANSACTIONS)
     if (data.rows.length > 0) {
       for (let i = 0; i < data.rows.length; i++) {
@@ -65,7 +64,6 @@ export class TransHistPage implements OnInit {
   onPullRefresh(event: any) {
     setTimeout(() => {
       this.getTransactionData();
-      this.cdr.detectChanges();
       event.target.complete();
     }, 2000);
 
@@ -89,17 +87,16 @@ export class TransHistPage implements OnInit {
             if (matchedTransaction && matchedTransaction.RecordStatus === 'S') {
               this.uiProviderService.presentToast(`Success# ${matchedTransaction.ReceiptNumber}`, `post performed on ${transaction.poNumber} ${transaction.itemNumber} with ${transaction.quantityReceived}`);
               console.log(matchedTransaction)
-              await this.updateTransaction(response, transaction.id);
+              await this.updateTransaction(matchedTransaction, transaction.id);
             }else if (matchedTransaction && matchedTransaction.RecordStatus === 'E') {
               this.uiProviderService.presentToast(MESSAGES.ERROR, matchedTransaction.Message + " for " + transaction.poNumber + " " + transaction.itemNumber, Color.ERROR);
               console.log(matchedTransaction)
-              await this.updateTransaction(response, transaction.id);
+              await this.updateTransaction(matchedTransaction, transaction.id);
             } else {
               this.uiProviderService.presentToast(MESSAGES.ERROR, 'post failed for ' + transaction.poNumber + " " + transaction.itemNumber, Color.TERTIARY);
             }
           })
-          await this.performDeltaSync();
-          this.cdr.detectChanges();
+          await this.sharedService.performDeltaSync(TableNames.DOCS4RECEIVING, this.selectedOrg);
         },
         error: (_) => {
           alert("post transaction failed: ")
@@ -148,9 +145,9 @@ export class TransHistPage implements OnInit {
     SET receiptInfo=?, error=?, status=?
     WHERE id = ?;`;
     let payload = [
-      response[0].ReceiptNumber, 
-      response[0].Message, 
-      response[0].RecordStatus,
+      response.ReceiptNumber, 
+      response.Message, 
+      response.RecordStatus,
       id
     ]
     try{
@@ -185,49 +182,4 @@ export class TransHistPage implements OnInit {
         
       }
   }
-  async performDeltaSync() {
-    const params = this.generateParams();
-    // const params = `${this.selectedOrg.InventoryOrgId_PK}/""/""`;
-    this.docsForReceivingSubscription = this.apiService.fetchAllByUrl(ApiSettings.DOCS4RECEIVING + params).subscribe({
-      next: async (resp: any) => {
-        this.uiProviderService.presentToast(MESSAGES.SUCCESS, 'transaction started', MESSAGES.SUCCESS);
-        if (resp && resp.status === 200) {
-          const columns = Object.keys(resp.body.Docs4Receiving[0])
-          try {
-            await resp.body.Docs4Receiving.forEach(async (element: any) => {
-              if (element.Flag === 'D') {
-                await this.sqliteService.executeCustonQuery(`DELETE FROM ${TableNames.DOCS4RECEIVING} WHERE OrderLineId=? AND PoLineLocationId=? AND ShipmentLineId=?`, [element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);
-              } else {
-                await this.sqliteService.insertData(`INSERT OR REPLACE INTO ${TableNames.DOCS4RECEIVING} (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`, Object.values(element));
-                const updateQuery = `
-                  UPDATE ${TableNames.DOCS4RECEIVING} 
-                  SET QtyOrdered = ?, QtyReceived = ?, QtyRemaining = ?
-                  WHERE OrderLineId = ?
-                  AND PoLineLocationId = ?
-                  AND ShipmentLineId = ?;`;
-
-              await this.sqliteService.executeCustonQuery(updateQuery, [element['QtyOrdered'], element['QtyReceived'], element['QtyRemaining'], element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]); 
-              }
-            })
-          } catch (error) {
-            console.log('error in performDeltaSync: ', error);
-          }
-        } else if (resp && resp.status === 204) {
-          console.log('no docs for receiving in delta');
-          this.uiProviderService.presentToast(MESSAGES.SUCCESS, 'No docs for receiving in delta');
-        } else {
-          console.error('error in performDeltaSync: ', resp);
-        }
-          
-        }, error: (err) => {
-          console.error('error in performDeltaSync: ', err);
-        }
-      })
-  }
-
-  generateParams() {
-    const orgId = this.selectedOrg.InventoryOrgId_PK
-    const formattedDate = formatDate(new Date(), "dd-MMM-yyyy HH:mm:ss", "en-US")
-    return `${orgId}/"${formattedDate}"/"N"`
-   }
 }

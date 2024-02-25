@@ -1,23 +1,24 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Storage } from '@ionic/storage-angular';
-import { ApiSettings } from '../CONSTANTS/CONSTANTS';
+import { ApiSettings, StoredItemnames } from '../CONSTANTS/CONSTANTS';
 import { interval } from 'rxjs';
 import { SqliteService } from './sqlite.service';
 import { formatDate } from '@angular/common';
 import { TableNames } from '../CONSTANTS/CONSTANTS';
 import { AuthService } from '../login/auth.service';
+// import { SharedService } from './shared.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class NodeApiService {
 
-  node_url: string = "https://testnode.propelapps.com/";
-  loginUrl: string = `${this.node_url}EBS/20D/login`;
-  getInventoryOrgUrl: string = `${this.node_url}EBS/20D/getInventoryOrganizations/''`;
-  getInventoryOrgTablesUrl: string = `${this.node_url}EBS/23A/getInventoryOrganizationsTable/`;
-  getLocationsUrl: string = `${this.node_url}EBS/20D/getLocations/"10-JUN-2024 10:10:00"/""`;
+  // node_url: string = "https://testnode.propelapps.com/";
+  // loginUrl: string = `${this.node_url}EBS/20D/login`;
+  // getInventoryOrgUrl: string = `${this.node_url}EBS/20D/getInventoryOrganizations/''`;
+  // getInventoryOrgTablesUrl: string = `${this.node_url}EBS/23A/getInventoryOrganizationsTable/`;
+  // getLocationsUrl: string = `${this.node_url}EBS/20D/getLocations/"10-JUN-2024 10:10:00"/""`;
   // getDocs4ReceivingUrl: string = `${this.node_url}EBS/20D/getDocumentsForReceiving/7963/""/""`;
   private _isLocationsTableEmpty: boolean = true;
   intervalDuration: number = 1000*60*5;
@@ -34,7 +35,8 @@ export class NodeApiService {
     private http: HttpClient,
     private storage: Storage,
     private sqliteService: SqliteService,
-    private authService: AuthService
+    private authService: AuthService,
+    // private sharedService: SharedService
   ) {
     this.storage.create();
     this.storage.set('isAllOrgTableData', false);
@@ -44,6 +46,8 @@ export class NodeApiService {
    async performDeltaSync(intervalDuration: number) {
     interval(intervalDuration).subscribe(async () => {
       const params = this.generateParams();
+      // const organisation = localStorage.getItem(StoredItemnames.SELECTED_ORG);
+      // await this.sharedService.performDeltaSync(TableNames.DOCS4RECEIVING, organisation);
       this.fetchAllByUrl(ApiSettings.DOCS4RECEIVING + params).subscribe({
         next: async (resp: any) => {
           if (resp && resp.status === 200) {
@@ -115,7 +119,7 @@ export class NodeApiService {
    }
 
    fetchLoginData(params: any) {
-     return this.http.post(this.loginUrl, params);
+     return this.http.post(ApiSettings.LOGIN, params);
    }
 
    performPostWithHeaders(url: string, body: any, headers: any) {
@@ -130,7 +134,7 @@ export class NodeApiService {
    }
 
    fetchAllOrgTableData(params: any) {
-     return this.http.get(`${ApiSettings.INVENTORY_ORG_TABLE}${params}`, {responseType: 'json'});
+     return this.http.get(`${ApiSettings.INVENTORY_ORG_TABLE}${params}`, {observe: 'response'});
    }
 
    fetchAllByUrl(url: string) {

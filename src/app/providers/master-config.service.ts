@@ -13,7 +13,7 @@ export class MasterConfigService {
   ) { }
 
 
-  async masterConfigApiCall(defaultOrgId: any, organisation: any): Promise<boolean> {
+  async masterConfigApiCall(defaultOrgId: any, organisation: any): Promise<any> {
     const masterApiCalls = [
       { api: ApiSettings.GL_PERIODS, name: RESPONSIBILITIES.GL_PERIODS, message: TypeOfApi.METADATA},
       { api: ApiSettings.GL_PERIODS, name: RESPONSIBILITIES.GL_PERIODS, message: TypeOfApi.GET_DATA},
@@ -32,12 +32,15 @@ export class MasterConfigService {
       { api: ApiSettings.REASONS, name: RESPONSIBILITIES.GET_REASONS, message: TypeOfApi.GET_DATA},
     ]
 
+    let masterPromises: any = []
+    let configPromises: any = []
+
     for (const api of masterApiCalls) {
       if (api.message === TypeOfApi.METADATA) {
         try {
           const params = 'metadata'
           const tableName = this.sharedService.getTableName(api.name)
-          await this.sharedService.fetchTableMetaData(api.api, tableName, params)
+          masterPromises.push(await this.sharedService.fetchTableMetaData(api.api, tableName, params))
         } catch (error) {
           console.error(`metadata ${api.name}`, error)
         } finally {
@@ -47,12 +50,10 @@ export class MasterConfigService {
         try {
           const params = this.sharedService.generateParams(api.name, defaultOrgId, organisation)
           const tableName = this.sharedService.getTableName(api.name)
-          await this.sharedService.fetchTableData(api.api, tableName, params)
+          masterPromises.push(await this.sharedService.fetchTableData(api.api, tableName, params))
         } catch (error) {
           console.error(`data ${api.name}`, error)
-        } finally {
-          await new Promise(resolve => setTimeout(resolve, 500))
-        }
+        } 
       }
     }
 
@@ -61,7 +62,7 @@ export class MasterConfigService {
         try {
           const params = 'metadata'
           const tableName = this.sharedService.getTableName(api.name)
-          await this.sharedService.fetchTableMetaData(api.api, tableName, params)
+          configPromises.push(await this.sharedService.fetchTableMetaData(api.api, tableName, params))
         } catch (error) {
           console.error(`config ${api.name}`, error)
         } finally {
@@ -71,17 +72,14 @@ export class MasterConfigService {
         try {
           const params = this.sharedService.generateParams(api.name, defaultOrgId, organisation)
           const tableName = this.sharedService.getTableName(api.name)
-          await this.sharedService.fetchTableData(api.api, tableName, params)
+          configPromises.push(await this.sharedService.fetchTableData(api.api, tableName, params))
         } catch (error) {
           console.error(`data ${api.name}`, error)
-        } finally {
-          await new Promise(resolve => setTimeout(resolve, 500))
-        }
+        } 
       }
     }
-    
     return new Promise((resolve) => {
-      resolve(true)
+      resolve([...masterPromises, ...configPromises])
     })
   }
 

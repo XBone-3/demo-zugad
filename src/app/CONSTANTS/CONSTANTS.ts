@@ -19,6 +19,11 @@ export class ApiSettings {
     static REVISIONS = `${NODE_URL}EBS/20D/getItemRevisions/`
 }
 
+export enum TransactionType {
+  POST = "POST",
+  DELTA_SYNC = "DELTA_SYNC",
+}
+
 export enum TableNames {
   LOGIN = "LOGIN",
   USERS = "USERS",

@@ -120,14 +120,6 @@
         </ion-button>
       </ion-col>
     </ion-row>
-
-    <!-- <ion-footer>
-      <ion-buttons>
-        <ion-button [disabled]="totalLotTypedQuantity !== maxTotalQuantity" (click)="onModalClose(sections)">
-          Done
-        </ion-button>
-      </ion-buttons>
-    </ion-footer> -->
   </ng-template>
 
 
@@ -168,27 +160,16 @@
       </ion-item>
 
       <ion-list class="ion-margin">
-        <ion-item *ngFor="let option of serialList;let index">
+        <ion-item *ngFor="let option of serialList; let i = index">
           <ion-label class="ion-text-start">
             <label for="org-{{option}}">{{ option}}</label>
           </ion-label>
           <ion-label class="ion-text-end">
-            <ion-icon (click)="deleteSerial(index)" name="trash-outline"></ion-icon>
+            <ion-icon  name="trash-outline" (click)="deleteSerial(i)"></ion-icon>
           </ion-label>
         </ion-item>
       </ion-list>
     </ion-list>
-
-    <!-- <ion-footer>
-      <ion-toolbar>
-        <ion-buttons>
-          <ion-button [disabled]="serialList.length!==this.receivedItemMsg[3]" (click)="onModalClose(serialList)"
-            expand="block" size="medium" shape="round">
-            Done
-          </ion-button>
-        </ion-buttons>
-      </ion-toolbar>
-    </ion-footer> -->
   </ng-template>
 
 
@@ -210,11 +191,7 @@
   <ng-template #lotFooter>
     <ion-footer>
       <ion-toolbar>
-        <ion-buttons>
-          <ion-button [disabled]="totalLotTypedQuantity !== maxTotalQuantity" (click)="onModalClose(sections)" expand="block">
-            Submit
-          </ion-button>
-        </ion-buttons>
+          <ion-button [disabled]="totalLotTypedQuantity !== maxTotalQuantity" (click)="onModalClose(sections)" expand="block"> Submit</ion-button>
       </ion-toolbar>
     </ion-footer>
   </ng-template>
@@ -222,12 +199,7 @@
   <ng-template #serialFooter>
     <ion-footer>
       <ion-toolbar>
-        <ion-buttons>
-          <ion-button [disabled]="serialList.length!==this.receivedItemMsg[3]" (click)="onModalClose(serialList)"
-            expand="block">
-            Submit
-          </ion-button>
-        </ion-buttons>
+          <ion-button [disabled]="serialList.length!==this.receivedItemMsg[3]" (click)="onModalClose(serialList)" expand="block">Submit</ion-button>
       </ion-toolbar>
     </ion-footer>
   </ng-template>

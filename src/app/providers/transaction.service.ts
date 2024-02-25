@@ -15,7 +15,7 @@ export class TransactionService {
 
   
 
-  async getTransactionalData(defaultOrgId: any, organisation: any): Promise<boolean> {
+  async getTransactionalData(defaultOrgId: any, organisation: any): Promise<any> {
 
     const transactionalApiCalls = [
       { api: ApiSettings.DOCS4RECEIVING, name: RESPONSIBILITIES.DOCS4RECEIVING, message: TypeOfApi.METADATA},
@@ -26,12 +26,14 @@ export class TransactionService {
       { api: ApiSettings.SERIALS, name: RESPONSIBILITIES.SERIALS, message: TypeOfApi.GET_DATA},
     ]
 
+    let transactionPromises: any = []
+
     for(const api of transactionalApiCalls) {
       if (api.message == TypeOfApi.METADATA) {
         try {
           const params = 'metadata';
           const tableName = this.sharedService.getTableName(api.name)
-          await this.sharedService.fetchTableMetaData(api.api, tableName, params);
+          transactionPromises.push(await this.sharedService.fetchTableMetaData(api.api, tableName, params))
         } catch (error) {
           console.error(`Error getting metadata for ${api.name}: `, error);
         } finally {
@@ -41,7 +43,7 @@ export class TransactionService {
         try {
           const params = this.sharedService.generateParams(api.name, defaultOrgId, organisation);
           const tableName = this.sharedService.getTableName(api.name)
-          await this.sharedService.fetchTableData(api.api, tableName, params);
+          transactionPromises.push(await this.sharedService.fetchTableData(api.api, tableName, params))
         } catch (error) {
           console.error(`Error getting data for ${api.name}: `, error);
         } finally {
@@ -49,6 +51,6 @@ export class TransactionService {
         }
       }
     }
-    return new Promise(resolve => resolve(true))
+    return new Promise(resolve => resolve(transactionPromises))
   }
 }

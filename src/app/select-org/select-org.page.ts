@@ -2,7 +2,7 @@ import { Component, OnDestroy, OnInit } from '@angular/core';
 import { UiProviderService } from '../providers/ui-provider.service';
 import { NodeApiService } from '../providers/node-api.service';
 import { NavController } from '@ionic/angular';
-import { Org } from '../CONSTANTS/CONSTANTS';
+import { Color, MESSAGES, Org, StoredItemnames } from '../CONSTANTS/CONSTANTS';
 import { Subscription } from 'rxjs';
 
 
@@ -40,8 +40,9 @@ export class SelectOrgPage implements OnInit, OnDestroy {
     this.uiproviderService.presentLoading('Loading...');
     if (!this.isAllOrgTableData) {
       this.apiService.fetchAllOrgTableData(org_id).subscribe({
-        next: async (orgData) => {
-          if (orgData) {
+        next: async (resp) => {
+          if (resp && resp.status === 200) {
+            const orgData = resp.body;
             await this.apiService.setValue('allOrgTableData', orgData);
             const allOrgTableData = await this.apiService.getValue('allOrgTableData')
             allOrgTableData.splice(1).forEach((element: any[]) => {
@@ -60,10 +61,14 @@ export class SelectOrgPage implements OnInit, OnDestroy {
             this.orgList.push(this.org);
           });
           this.organisations = [...this.orgList] 
-        } 
+        } else {
+          this.uiproviderService.presentToast(MESSAGES.ERROR, 'Error while fetching data from server', Color.ERROR);
+          this.uiproviderService.dismissLoading();
+        }
       },
         error: (_) => {
-          this.uiproviderService.presentToast('Error', 'Error while fetching data from server', "danger");
+          this.uiproviderService.presentToast(MESSAGES.ERROR, 'Error while fetching data from server', Color.ERROR);
+          this.uiproviderService.dismissLoading();
         },
         complete: () => {
           this.uiproviderService.dismissLoading();
@@ -90,10 +95,10 @@ export class SelectOrgPage implements OnInit, OnDestroy {
   }
 
   async onConfirm() {
-    console.log("selectedOrg", this.selectedOrg);
+    console.log(StoredItemnames.SELECTED_ORG, this.selectedOrg);
     if (this.selectedOrg) {
-      await this.apiService.setValue('selectedOrg', this.selectedOrg);
-      localStorage.setItem('orgId_pk', this.selectedOrg.InventoryOrgId_PK);
+      await this.apiService.setValue(StoredItemnames.SELECTED_ORG, this.selectedOrg);
+      localStorage.setItem(StoredItemnames.SELECTED_ORG, this.selectedOrg);
       await this.apiService.setValue('selectedOrgId', this.selectedOrg.InventoryOrgCode);
       this.navCtrl.navigateForward('/activity');
     }
