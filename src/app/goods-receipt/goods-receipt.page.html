@@ -16,8 +16,7 @@
             <ion-searchbar show-clear-button="always" clear-icon="trash-bin" [(ngModel)]="searchText" (ionInput)="onSearch($event)" (ionChange)="onSearch($event)"></ion-searchbar>
           </ion-col>
           <ion-col size="2">
-            <app-scan class="make-sticky" [searchTerm]="searchText"
-                      (clearSearchChange)="clearSearch()" (sendScanValue)="scan($event)"></app-scan>
+            <app-scan-c class="make-sticky" [searchTerm]="searchText" (clearSearchChange)="clearSearch()" (sendScanValue)="scan($event)"></app-scan-c>
           </ion-col>
         </ion-row>
       </ion-grid>

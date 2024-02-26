@@ -2,12 +2,13 @@ import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core'
 import { BarcodeScanner } from '@capacitor-community/barcode-scanner';
 import { UiProviderService } from 'src/app/providers/ui-provider.service';
 
+
 @Component({
-  selector: 'app-scan',
-  templateUrl: './scan.page.html',
-  styleUrls: ['./scan.page.scss'],
+  selector: 'app-scan-c',
+  templateUrl: './scan-c.component.html',
+  styleUrls: ['./scan-c.component.scss'],
 })
-export class ScanPage implements OnInit {
+export class ScanCComponent  implements OnInit {
   @Input() searchTerm: any = "";
   @Input() showSearch: boolean = false;
   @Output() toggleClick: EventEmitter<any> = new EventEmitter<any>();
@@ -25,6 +26,7 @@ export class ScanPage implements OnInit {
   async scan(): Promise<void> {
     await BarcodeScanner.checkPermission({ force: true });
     BarcodeScanner.hideBackground();
+    BarcodeScanner.prepare();
     const result = await BarcodeScanner.startScan();
     if (result.hasContent) {
       this.sendScanValue.emit(result.content);
@@ -49,5 +51,4 @@ export class ScanPage implements OnInit {
     this.searchTerm = '';
     this.clearSearchChange.emit(this.searchTerm)
   }
-
 }

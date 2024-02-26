@@ -1,7 +1,0 @@
-{
-  "typescript.preferences.autoImportFileExcludePatterns": [
-    "@ionic/angular/common",
-    "@ionic/angular/standalone"
-  ],
-  "ionic.defaultPort": 8080
-}

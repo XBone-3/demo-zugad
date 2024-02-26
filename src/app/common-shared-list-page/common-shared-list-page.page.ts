@@ -15,6 +15,7 @@ import { ChangeDetectorRef } from '@angular/core';
   styleUrls: ['./common-shared-list-page.page.scss'],
 })
 export class CommonSharedListPage implements OnInit {
+
   commonList: any;
   LotList: any;
   receivedItemMsg: any;
@@ -225,9 +226,16 @@ export class CommonSharedListPage implements OnInit {
       }
     }
     else {
-      
+      this.uiProviderService.presentToast(MESSAGES.ERROR,'Serial number not found', Color.ERROR);
     }
   }
+
+  scanSerial(event: any) {
+    this.onSerialSelect(event);
+    }
+  // clearSearch($event: any) {
+  // throw new Error('Method not implemented.');
+  // }
 
   async onLotSelect() {
     const modal = await this.modalController.create({

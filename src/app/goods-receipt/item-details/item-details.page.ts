@@ -57,6 +57,7 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
     private activatedRoute: ActivatedRoute,
     private networkService: NetworkService,
     private modalController: ModalController,
+    private authService: AuthService
   ) { 
     this.apiService.getValue('loginData').then((val) => {
       this.userDetails = val[0];
@@ -142,7 +143,6 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
         if (this.hasNetwork) {
           this.postitemSubscription = this.apiService.performPost(ApiSettings.CREATE_GOODS_RECEIPT, generatedPayload).subscribe({next: async (resp: any) => {
               const response = resp['Response']
-              
               if (response[0].RecordStatus === 'S') {
                 transactionPayload.status = response[0].RecordStatus;
                 transactionPayload.receiptInfo = response[0].ReceiptNumber;
@@ -162,7 +162,11 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
               console.error("error while performing post transaction: ", error)
             },
             complete: async () => {
-              await this.sharedService.insertTransaction(transactionPayload, TableNames.TRANSACTIONS);
+              try {
+                await this.sharedService.insertTransaction(transactionPayload, TableNames.TRANSACTIONS);
+              } catch (error) {
+                console.error("error while inserting transaction: ", error)
+              }
               this.uiProviderService.dismissLoading();
             }
           })
@@ -335,7 +339,7 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
                   TransactionType: 'RECEIVE',
                   AutoTransactCode: 'DELIVER',
                   OrganizationCode: item.OrganizationCode,
-                  DocumentNumber: item.PONumber,
+                  DocumentNumber: item.PoNumber,
                   DocumentLineNumber: item.PoShipmentNumber,
                   ItemNumber: item.ItemNumber,
                   TransactionDate: formatDate(new Date(), 'dd-MMM-yyyy HH:mm:ss', 'en-US'),
@@ -345,10 +349,10 @@ export class ItemDetailsPage implements OnInit, OnDestroy {
                   SecondaryUnitOfMeasure: '',
                   ShipmentHeaderId: item.ShipmentHeaderId,
                   ItemRevision: this.itemRevCode,
-                  POHeaderId: item.POHeaderId,
-                  POLineLocationId: item.POLineLocationId,
-                  POLineId: item.POLineId,
-                  PODistributionId: item.PODistributionId,
+                  POHeaderId: item.PoHeaderId,
+                  POLineLocationId: item.PoLineLocationId,
+                  POLineId: item.PoLineId,
+                  PODistributionId: item.PoDistributionId,
                   ReasonName: item.ReasonName,
                   Comments: item.Comments,
                   ShipmentLineId: item.ShipmentLineId,

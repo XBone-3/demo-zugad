@@ -114,20 +114,22 @@ export class SharedService {
         if (resp && resp.status === 200) {
           const columns = Object.keys(resp.body.Docs4Receiving[0])
           try {
-            await resp.body.Docs4Receiving.forEach(async (element: any) => {
-              if (element["Flag"] === 'D') {
-                await this.sqliteService.executeCustonQuery(`DELETE FROM ${tableName} WHERE OrderLineId=? AND PoLineLocationId=? AND ShipmentLineId=?`, [element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);
-              } else {
-                await this.sqliteService.insertData(`INSERT INTO ${tableName} (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`, Object.values(element));
-                const updateQuery = `
-                  UPDATE ${tableName} 
-                  SET QtyOrdered = ?, QtyReceived = ?, QtyRemaining = ?
-                  WHERE OrderLineId = ?
-                  AND PoLineLocationId = ?
-                  AND ShipmentLineId = ?;`;
-
-              await this.sqliteService.executeCustonQuery(updateQuery, [element['QtyOrdered'], element['QtyReceived'], element['QtyRemaining'], element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);              }
+            const Docs4Receiving = resp.body.Docs4Receiving
+            await Docs4Receiving.forEach(async (element: any) => {
+              try {
+                if (element["Flag"] === 'D' || element.Flag === 'D') {
+                  await this.sqliteService.executeCustonQuery(`DELETE FROM ${tableName} WHERE OrderLineId=? AND PoLineLocationId=? AND ShipmentLineId=?`, [element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);
+                } else {
+                  await this.sqliteService.insertData(`INSERT OR IGNORE INTO ${tableName} (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`, Object.values(element));
+                  const updateQuery = `UPDATE ${tableName} SET QtyOrdered = ?, QtyReceived = ?, QtyRemaining = ? WHERE OrderLineId = ? AND PoLineLocationId = ? AND ShipmentLineId = ?`;
+  
+                  await this.sqliteService.executeCustonQuery(updateQuery, [element['QtyOrdered'], element['QtyReceived'], element['QtyRemaining'], element['OrderLineId'], element['PoLineLocationId'], element['ShipmentLineId']]);              
+                }
+              } catch (error) {
+               console.error('error while inserting or update data: ', error); 
+              }
             })
+            console.log('Docs4Receiving: deltaSync performed successfully')
           } catch (error) {
             console.error('error in performDeltaSync: ', error);
           }
@@ -174,7 +176,7 @@ export class SharedService {
   async insertDataToTableChunks(response: any, tableName: string) {
     try {
       const columns = Object.keys(response[0])
-      const baseQuery = `INSERT OR IGNORE INTO ${tableName} (${columns.join(',')}) VALUES {};`;
+      const baseQuery = `INSERT OR REPLACE INTO ${tableName} (${columns.join(',')}) VALUES {};`;
       const docs_to_insert = response.map((doc: any) => Object.values(doc));
       const chunkSize = 50;
       for (let i = 0; i < docs_to_insert.length; i += chunkSize) {
@@ -217,7 +219,7 @@ export class SharedService {
 
   async createTransactionHistoryTable(table_name: string) {
     let createTransactionHistoryTableQuery = `CREATE TABLE IF NOT EXISTS ${table_name} (
-      id INTEGER PRIMARY KEY AUTOINCREMENT ,
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
       poNumber TEXT,
       titleName TEXT,
       syncStatus DATETIME,
@@ -255,7 +257,7 @@ export class SharedService {
       userId TEXT,
       employeeId TEXT,
       bussinessUnitId TEXT,
-      inventoryOrgId TEXT,
+      inventoryOrgId TEXT
       )`
     await this.sqliteService.createTable(createTransactionHistoryTableQuery, table_name);
   }

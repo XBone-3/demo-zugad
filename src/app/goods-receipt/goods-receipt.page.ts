@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { SqliteService } from '../providers/sqlite.service';
-import { TableNames } from '../CONSTANTS/CONSTANTS';
+import { Color, MESSAGES, TableNames } from '../CONSTANTS/CONSTANTS';
 import { NavController } from '@ionic/angular';
 import { NodeApiService } from '../providers/node-api.service';
 import { UiProviderService } from '../providers/ui-provider.service';
@@ -17,6 +17,7 @@ export class GoodsReceiptPage implements OnInit {
   docsForReceiving: any[] = [];
   searchText: string = '';
   receipts: any[] = [];
+  fullDocs: any[] = [];
   offset = 0
 
   constructor(
@@ -30,6 +31,7 @@ export class GoodsReceiptPage implements OnInit {
 
   ngOnInit() {
     this.paginationData();
+    this.loadFullDocs();
   }
 
   async paginationData() {
@@ -62,25 +64,50 @@ export class GoodsReceiptPage implements OnInit {
 
   async scan(val: any) {
     if (val) {
-      const query = `SELECT * FROM ${TableNames.DOCS4RECEIVING} WHERE PoNumber LIKE '%${this.searchText}%' GROUP BY PoNumber`;
+      const query = `SELECT * FROM ${TableNames.DOCS4RECEIVING} WHERE PoNumber = '${this.searchText}' GROUP BY PoNumber`;
       const data = await this.sqliteService.executeCustonQuery(query)
+      let pos = []
       if (data.rows.length > 0) {
         for (let i = 0; i < data.rows.length; i++) {
-          this.docsForReceiving.push(data.rows.item(i));
+          pos.push(data.rows.item(i));
         }
-        this.receipts = [...this.docsForReceiving]
-        this.onSearch(val)
+        if (pos.length > 0) {
+          this.goToItems(pos[0]);
+        } else {
+          this.uiProviderService.presentToast(MESSAGES.ERROR, `PO Number ${val} not found`, Color.ERROR);
+        }
       } else {
         console.log('No data');
+        this.uiProviderService.presentToast(MESSAGES.ERROR, `PO Number ${val} not found`, Color.ERROR);
       }
     } else {
-      this.receipts = [...this.docsForReceiving]
+      this.uiProviderService.presentToast(MESSAGES.ERROR, `Scanner does not scan a value correctly`, Color.ERROR);
     }
     
   }
 
+  async loadFullDocs() {
+    try {
+      const query = `SELECT * FROM ${TableNames.DOCS4RECEIVING} 
+    WHERE PoNumber IS NOT NULL 
+    AND 
+    PoHeaderId IS NOT NULL
+    GROUP BY PoNumber`;
+      const docs = await this.sqliteService.executeCustonQuery(query)
+      if (docs.rows.length > 0) {
+        for (let i = 0; i < docs.rows.length; i++) {
+          this.fullDocs.push(docs.rows.item(i));
+        }
+      } else {
+        console.log('docs for receiving has No data');
+      }
+    } catch (error) {
+      console.error(error)
+    }
+  }
+
   onSearch(event: any) {
-    this.receipts = this.docsForReceiving.filter((item) => {
+    this.receipts = this.fullDocs.filter((item) => {
       return (item.PoNumber.toString().toLowerCase().indexOf(this.searchText.toLowerCase()) > -1);
     })
   }

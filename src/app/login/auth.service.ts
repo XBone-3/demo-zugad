@@ -112,8 +112,9 @@ export class AuthService {
           if (this.isLoggedIn) {
               const login_data = this.apiService.getValue('loginData')
               this.saveLoginData([data.username, data.password]);
-              const loginDate = new Date().getTime() - 5*60*1000;
-              this.lastLoginDate = formatDate(new Date(loginDate), "dd-MMM-yyyy HH:mm:ss", "en-US")
+              const loginDate = new Date();
+              loginDate.setDate(loginDate.getDate() - 1);
+              this.lastLoginDate = formatDate(loginDate, "dd-MMM-yyyy HH:mm:ss", "en-US")
               this.uiProviderService.presentToast('Success', 'Login Successful', 'success');
               this.navCtrl.navigateForward('/select-org', {queryParams: {data: login_data}});
           } else {

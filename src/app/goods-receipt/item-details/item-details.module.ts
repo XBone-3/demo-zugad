@@ -10,7 +10,6 @@ import { ItemRevisionPage } from 'src/app/shared-components/item-revision/item-r
 import { LotPage } from 'src/app/shared-components/lot/lot.page';
 import { SerialPage } from 'src/app/shared-components/serial/serial.page';
 import { UomPage } from 'src/app/shared-components/uom/uom.page';
-import { ScanPage } from 'src/app/shared-components/scan/scan.page';
 
 @NgModule({
   imports: [

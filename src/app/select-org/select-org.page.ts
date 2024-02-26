@@ -95,7 +95,7 @@ export class SelectOrgPage implements OnInit, OnDestroy {
   }
 
   async onConfirm() {
-    console.log(StoredItemnames.SELECTED_ORG, this.selectedOrg);
+    // console.log(StoredItemnames.SELECTED_ORG, this.selectedOrg);
     if (this.selectedOrg) {
       await this.apiService.setValue(StoredItemnames.SELECTED_ORG, this.selectedOrg);
       localStorage.setItem(StoredItemnames.SELECTED_ORG, this.selectedOrg);

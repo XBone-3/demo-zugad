@@ -7,6 +7,7 @@ import { IonicModule } from '@ionic/angular';
 import { CommonSharedListPagePageRoutingModule } from './common-shared-list-page-routing.module';
 
 import { CommonSharedListPage } from './common-shared-list-page.page';
+import { SharedModule } from '../shared/shared.module';
 
 @NgModule({
   imports: [
@@ -14,7 +15,8 @@ import { CommonSharedListPage } from './common-shared-list-page.page';
     FormsModule,
     ReactiveFormsModule,
     IonicModule,
-    CommonSharedListPagePageRoutingModule
+    CommonSharedListPagePageRoutingModule,
+    SharedModule
   ],
   declarations: [CommonSharedListPage]
 })

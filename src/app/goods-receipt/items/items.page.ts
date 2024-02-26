@@ -4,9 +4,12 @@ import { NavController } from '@ionic/angular';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import {
+  Color,
+  MESSAGES,
   TableNames
 } from 'src/app/CONSTANTS/CONSTANTS';
 import { NodeApiService } from 'src/app/providers/node-api.service';
+import { UiProviderService } from 'src/app/providers/ui-provider.service';
 
 @Component({
   selector: 'app-items',
@@ -26,7 +29,8 @@ export class ItemsPage implements OnInit, OnDestroy {
     private sqliteService: SqliteService,
     private navCtrl: NavController,
     private activatedRoute: ActivatedRoute,
-    private apiService: NodeApiService
+    private apiService: NodeApiService,
+    private uiProviderService: UiProviderService
   ) { }
 
   async ngOnInit() {
@@ -62,11 +66,18 @@ export class ItemsPage implements OnInit, OnDestroy {
   }
 
   onScan(event: any) {
-    this.navCtrl.navigateForward('/goods-receipt/item-details', {
-      queryParams: {
-        item: event
+    if (event){
+      const item = this.docsForReceiving.find((item) => {
+        return (item.ItemNumber.toLowerCase() === event.toLowerCase())
+      })
+      if (item) {
+        this.goToItemDetails(item);
+      } else {
+        this.uiProviderService.presentToast(MESSAGES.ERROR, `Item ${event} not found`, Color.ERROR);
       }
-    });
+    } else {
+      this.uiProviderService.presentToast(MESSAGES.ERROR, `Scanner does not scan a value correctly`, Color.ERROR);
+    }
   }
 
   onClearSearch(event: any) {

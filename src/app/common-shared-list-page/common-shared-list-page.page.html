@@ -135,9 +135,23 @@
 
     <ion-list>
       <ion-item class="ion-margin">
-        <ion-label> Serial# </ion-label>
-        <ion-input type="text" [(ngModel)]="serialNum" (ionInput)="onSerialSelect($event)"
-          placeholder="Scan Serial"></ion-input>
+        <ion-toolbar>
+          <ion-buttons>
+            <ion-grid>
+              <ion-row>
+                <ion-col size="10">
+                  <ion-label> Serial# </ion-label>
+                  <ion-input type="text" [(ngModel)]="serialNum" (ionInput)="onSerialSelect($event)"
+                    placeholder="Scan Serial"></ion-input>
+                </ion-col>
+                <ion-col size="2">
+                  <app-scan-c [searchTerm]="serialNum" (sendScanValue)="scanSerial($event)"></app-scan-c>
+                </ion-col>
+              </ion-row>
+            </ion-grid>
+          </ion-buttons>
+        </ion-toolbar>
+        
       </ion-item>
 
       <ion-item class="ion-margin">

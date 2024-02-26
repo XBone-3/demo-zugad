@@ -23,9 +23,8 @@
       </ion-card-header>
       <ion-buttons>
         <ion-card-content>
-          
-          <p>ReceiptNo: {{ transaction.receiptInfo }}</p>
-          <p>Error: {{ transaction.error }}</p>
+          <p *ngIf="transaction.receiptInfo">ReceiptNo: {{ transaction.receiptInfo }}</p>
+          <p *ngIf="transaction.error">Error: {{ transaction.error }}</p>
           <p>Status: {{ transaction.status === 'local'? 'Pending': transaction.status === 'S'? 'Success': 'Error' }}</p>
         </ion-card-content>
         <!-- <ion-button slot="end" *ngIf="hasConnection && transaction.status==='local'" (click)="syncTransaction(transaction)">
